@@ -1,634 +1,549 @@
 /**
- * app.js — 四柱推命 メインロジック
- * =====================================
- * 各エンジンを分離して実装しています。
- * 後から本格化する際は各エンジンだけを修正すればOK。
- *
- * ▼ エンジン一覧
- *   CalendarEngine   — 節入り・干支の日付計算
- *   PillarsEngine    — 年柱・月柱・日柱・時柱の算出
- *   AttributesEngine — 五行・陰陽・蔵干
- *   StarsEngine      — 通変星・十二運
- *   StrengthEngine   — 身強・身弱の簡易判定
- *   FortuneEngine    — 年運・月運・日運
- *   InterpretationEngine — 結果を文章に変換
+ * app.js v3 — 命式占 UIロジック
+ * ================================
+ * 計算エンジンはv2（data.js）をそのまま使用。
+ * UIRenderer を全面刷新。
+ * 追加機能：
+ *   - 星空アニメーション（Canvas）
+ *   - 結果画面のヒーローレイアウト
+ *   - 展開可能な詳細セクション（命式・大運）
+ *   - ボトムシート型モーダル
  */
 
 'use strict';
 
 // =============================================
-// CalendarEngine — 節入り・干支の日付計算
+// StarField — 背景の星アニメーション
+// =============================================
+const StarField = {
+  canvas: null,
+  ctx: null,
+  stars: [],
+  animId: null,
+
+  init() {
+    this.canvas = document.getElementById('stars-canvas');
+    if (!this.canvas) return;
+    this.ctx = this.canvas.getContext('2d');
+    this.resize();
+    this.createStars(120);
+    this.animate();
+    window.addEventListener('resize', () => this.resize());
+  },
+
+  resize() {
+    this.canvas.width  = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  },
+
+  createStars(count) {
+    this.stars = Array.from({ length: count }, () => ({
+      x:       Math.random() * window.innerWidth,
+      y:       Math.random() * window.innerHeight,
+      r:       Math.random() * 1.2 + 0.2,
+      opacity: Math.random() * 0.7 + 0.1,
+      speed:   Math.random() * 0.003 + 0.001,
+      phase:   Math.random() * Math.PI * 2,
+    }));
+  },
+
+  animate() {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    const now = Date.now() * 0.001;
+    this.stars.forEach(s => {
+      const pulse = Math.sin(now * s.speed * 60 + s.phase) * 0.35 + 0.65;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(240, 220, 160, ${s.opacity * pulse})`;
+      ctx.fill();
+    });
+    this.animId = requestAnimationFrame(() => this.animate());
+  },
+};
+
+// =============================================
+// CalendarEngine（v2継承）
 // =============================================
 const CalendarEngine = {
-
-  /**
-   * 月干支の基準となる「節入り日」の概算テーブル（月日のみ）
-   * ※本格実装では天文計算が必要。ここでは標準的な概算値を使用。
-   * [月, 日] 形式。各月の節入りは年によって±1〜2日ずれる。
-   */
-  SETSUIRI_TABLE: [
-    [2,  4],  // 立春 (寅月開始)
-    [3,  6],  // 啓蟄
-    [4,  5],  // 清明
-    [5,  6],  // 立夏
-    [6,  6],  // 芒種
-    [7,  7],  // 小暑
-    [8,  7],  // 立秋
-    [9,  8],  // 白露
-    [10, 8],  // 寒露
-    [11, 7],  // 立冬
-    [12, 7],  // 大雪
-    [1,  6],  // 小寒 (翌年1月)
+  SETSUIRI_OFFSETS: [
+    { month:2,  day:4,  shiIdx:2  },
+    { month:3,  day:6,  shiIdx:3  },
+    { month:4,  day:5,  shiIdx:4  },
+    { month:5,  day:6,  shiIdx:5  },
+    { month:6,  day:6,  shiIdx:6  },
+    { month:7,  day:7,  shiIdx:7  },
+    { month:8,  day:7,  shiIdx:8  },
+    { month:9,  day:8,  shiIdx:9  },
+    { month:10, day:8,  shiIdx:10 },
+    { month:11, day:7,  shiIdx:11 },
+    { month:12, day:7,  shiIdx:0  },
+    { month:1,  day:6,  shiIdx:1  },
   ],
-
-  /**
-   * 指定した年月日が何番目の「月支」に属するかを返す
-   * 四柱推命の月柱は「節入り」を基準とする（太陽暦の月ではない！）
-   * @returns {number} 0〜11 (寅月=0, 卯月=1, ..., 丑月=11)
-   */
-  getMonthBranch(year, month, day) {
-    const setsu = this.SETSUIRI_TABLE;
-    // 節入りより前なら前の月支を使う
-    let branchIdx = month - 2; // 2月立春=寅月(idx=2)
-    const [sm, sd] = setsu[((month - 2) + 12) % 12]; // その月の節入り
-    const nodeMonth = sm === 1 ? 1 : sm; // 1月は翌年処理
-    if (month === sm && day < sd) branchIdx -= 1;
-    if (month === 1) {
-      // 1月の場合：小寒(1/6頃)前は前年の丑月、小寒以降は寅月前
-      const [sm0, sd0] = setsu[11]; // 小寒
-      if (day < sd0) {
-        // 前の月支（丑=11）
-        return 11;
-      }
-      return 11; // 1月は基本的に丑月(11)
-    }
-    return ((branchIdx % 12) + 12) % 12;
-  },
-
-  /**
-   * 年干支の計算
-   * 四柱推命の年干支は「立春（2月4日頃）」を基準とする。
-   * 例：2024年2月3日 → 癸卯年（前年の年干支）
-   * @returns {{ kanIdx: number, shiIdx: number }}
-   */
+  getRisshunDay(year) { return RISSHUN_DAYS[year] || 4; },
   getYearGanZhi(year, month, day) {
-    // 立春前は前の年の干支を使う
     let y = year;
-    const [sm, sd] = this.SETSUIRI_TABLE[0]; // 立春
-    if (month < sm || (month === sm && day < sd)) {
-      y -= 1;
+    if (month < 2 || (month === 2 && day < this.getRisshunDay(year))) y--;
+    return { kanIdx: ((y-4)%10+10)%10, shiIdx: ((y-4)%12+12)%12 };
+  },
+  getMonthShiIdx(year, month, day) {
+    const corr = this.getRisshunDay(year) - 4;
+    for (let i = 0; i < this.SETSUIRI_OFFSETS.length; i++) {
+      const s = this.SETSUIRI_OFFSETS[i];
+      if (s.month === month) {
+        return day >= s.day + corr
+          ? s.shiIdx
+          : this.SETSUIRI_OFFSETS[(i-1+12)%12].shiIdx;
+      }
     }
-    // 西暦年から干支インデックスを算出
-    // 1984年 = 甲子年 (干=0, 支=0)
-    const kanIdx = ((y - 4) % 10 + 10) % 10;
-    const shiIdx = ((y - 4) % 12 + 12) % 12;
-    return { kanIdx, shiIdx };
+    return 2;
   },
-
-  /**
-   * 月干支の計算
-   * 月干は年干によって決まる（五虎遁年法）
-   * @returns {{ kanIdx: number, shiIdx: number }}
-   */
   getMonthGanZhi(yearKanIdx, year, month, day) {
-    // 月支のインデックス（寅月=2始まり）
-    const branchMap = [2,3,4,5,6,7,8,9,10,11,0,1]; // 月→支インデックス(月1=丑=1, 月2=寅=2...)
-    let monthShi;
-    const [sm, sd] = this.SETSUIRI_TABLE[((month - 2) + 12) % 12];
-    // 節入り前なら前月の支
-    let adjustedMonth = month;
-    if (day < sd && month === sm) adjustedMonth = ((month - 2 + 12) % 12) + 1;
-    monthShi = ((adjustedMonth + 1) % 12); // 1月=丑(1), 2月=寅(2) ...
-
-    // 五虎遁年法：年干から月干の開始値を決める
-    // 甲己年→寅月は丙(2)  乙庚年→戊(4)  丙辛年→庚(6)  丁壬年→壬(8)  戊癸年→甲(0)
-    const startKan = [2, 4, 6, 8, 0, 2, 4, 6, 8, 0][yearKanIdx];
-    // 寅月(2)からのオフセット
-    const offset = ((monthShi - 2) + 12) % 12;
-    const kanIdx = (startKan + offset) % 10;
-    const shiIdx = ((monthShi) % 12 + 12) % 12;
-    return { kanIdx, shiIdx };
+    const shiIdx = this.getMonthShiIdx(year, month, day);
+    const startKan = [2,4,6,8,0,2,4,6,8,0][yearKanIdx];
+    const offset = ((shiIdx-2)+12)%12;
+    return { kanIdx: (startKan+offset)%10, shiIdx };
   },
-
-  /**
-   * 日干支の計算（60干支サイクル）
-   * 基準日: 2024年1月1日 = 甲子日(0,0)から逆算
-   * ※この計算は簡易版です。本格実装ではユリウス日数を使います。
-   */
   getDayGanZhi(year, month, day) {
-    // 基準日: 1900年1月1日 = 甲戌(0,10)
-    const base = new Date(1900, 0, 1);
-    const target = new Date(year, month - 1, day);
-    const diffDays = Math.round((target - base) / (1000 * 60 * 60 * 24));
-    const BASE_KAN = 0; // 甲
-    const BASE_SHI = 10; // 戌
-    const kanIdx = ((diffDays + BASE_KAN) % 10 + 10) % 10;
-    const shiIdx = ((diffDays + BASE_SHI) % 12 + 12) % 12;
-    return { kanIdx, shiIdx };
+    const diff = Math.round((new Date(year,month-1,day) - new Date(1900,0,1)) / 86400000);
+    return { kanIdx: ((diff)%10+10)%10, shiIdx: ((diff+10)%12+12)%12 };
   },
-
-  /**
-   * 時柱の干支計算（五鼠遁日法）
-   * 日干によって時干の起点が決まる
-   */
   getHourGanZhi(dayKanIdx, hour) {
-    // 時支インデックス（子=0, 丑=1, ... 亥=11）
-    // 23:00-00:59 = 子, 01:00-02:59 = 丑 ...
-    const hourBranches = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11];
-    const shiIdx = hourBranches[hour] ?? 0;
-
-    // 五鼠遁日法：日干から時干の起点を決める
-    // 甲己日→子時は甲(0)  乙庚日→丙(2)  丙辛日→戊(4)  丁壬日→庚(6)  戊癸日→壬(8)
-    const startKan = [0, 2, 4, 6, 8, 0, 2, 4, 6, 8][dayKanIdx];
-    const kanIdx = (startKan + shiIdx) % 10;
-    return { kanIdx, shiIdx };
+    const shi = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11][hour]??0;
+    return { kanIdx: ([0,2,4,6,8,0,2,4,6,8][dayKanIdx]+shi)%10, shiIdx: shi };
   },
 };
 
-// =============================================
-// PillarsEngine — 年柱・月柱・日柱・時柱の算出
-// =============================================
 const PillarsEngine = {
-  /**
-   * 四柱を一括計算して返す
-   * @param {number} year, month, day, hour
-   * @returns {{ year, month, day, hour }} 各柱 { kanIdx, shiIdx }
-   */
   calculate(year, month, day, hour) {
-    const yearPillar  = CalendarEngine.getYearGanZhi(year, month, day);
-    const monthPillar = CalendarEngine.getMonthGanZhi(yearPillar.kanIdx, year, month, day);
-    const dayPillar   = CalendarEngine.getDayGanZhi(year, month, day);
-    const hourPillar  = CalendarEngine.getHourGanZhi(dayPillar.kanIdx, hour);
-    return {
-      year:  yearPillar,
-      month: monthPillar,
-      day:   dayPillar,
-      hour:  hourPillar,
-    };
+    const y = CalendarEngine.getYearGanZhi(year, month, day);
+    const m = CalendarEngine.getMonthGanZhi(y.kanIdx, year, month, day);
+    const d = CalendarEngine.getDayGanZhi(year, month, day);
+    const h = CalendarEngine.getHourGanZhi(d.kanIdx, hour);
+    return { year:y, month:m, day:d, hour:h };
   },
 };
 
-// =============================================
-// AttributesEngine — 五行・陰陽・蔵干
-// =============================================
 const AttributesEngine = {
-  /**
-   * 四柱全体の五行カウントを集計
-   * @param {object} pillars PillarsEngineの戻り値
-   * @returns {object} { 木:n, 火:n, 土:n, 金:n, 水:n }
-   */
   countGogyou(pillars) {
-    const count = { "木":0, "火":0, "土":0, "金":0, "水":0 };
-    const allPillars = [pillars.year, pillars.month, pillars.day, pillars.hour];
-    allPillars.forEach(p => {
-      const kanElem = JIKKAN[p.kanIdx].element;
-      const shiElem = JUNISHI[p.shiIdx].element;
-      count[kanElem]++;
-      count[shiElem]++;
+    const count = {"木":0,"火":0,"土":0,"金":0,"水":0};
+    [pillars.year,pillars.month,pillars.day,pillars.hour].forEach(p => {
+      count[JIKKAN[p.kanIdx].element] += 2;
+      const z = ZOKAN[JUNISHI[p.shiIdx].name];
+      if (z) {
+        if (z.honki  !== null) count[JIKKAN[z.honki].element]  += 3;
+        if (z.chuuki !== null) count[JIKKAN[z.chuuki].element] += 2;
+        if (z.yoki   !== null) count[JIKKAN[z.yoki].element]   += 1;
+      }
     });
     return count;
   },
-
-  /**
-   * 五行バランスのパーセンテージを計算
-   */
   getGogyouBalance(count) {
-    const total = Object.values(count).reduce((a, b) => a + b, 0);
-    const result = {};
-    for (const k in count) {
-      result[k] = Math.round((count[k] / total) * 100);
-    }
-    return result;
+    const total = Object.values(count).reduce((a,b)=>a+b,0);
+    const r = {};
+    for (const k in count) r[k] = Math.round(count[k]/total*100);
+    return r;
+  },
+  getMonthRei(dayKanIdx, monthShiIdx) {
+    const z = ZOKAN[JUNISHI[monthShiIdx].name];
+    return z?.honki != null ? getTsuhensei(dayKanIdx, z.honki) : null;
   },
 };
 
-// =============================================
-// StarsEngine — 通変星・十二運
-// =============================================
 const StarsEngine = {
-  /**
-   * 通変星を計算（日干を自分として、他の干との関係）
-   * @param {number} dayKanIdx 日干のインデックス
-   * @param {object} pillars 四柱データ
-   * @returns {object} { year, month, hour } それぞれの通変星名
-   */
-  getTsuhensei(dayKanIdx, pillars) {
-    return {
-      year:  getTsuhensei(dayKanIdx, pillars.year.kanIdx),
-      month: getTsuhensei(dayKanIdx, pillars.month.kanIdx),
-      hour:  getTsuhensei(dayKanIdx, pillars.hour.kanIdx),
-    };
+  getTsuhensei(dk, pillars) {
+    return { year:getTsuhensei(dk,pillars.year.kanIdx), month:getTsuhensei(dk,pillars.month.kanIdx), hour:getTsuhensei(dk,pillars.hour.kanIdx) };
   },
-
-  /**
-   * 十二運を計算
-   * @param {number} dayKanIdx 日干のインデックス
-   * @param {object} pillars 四柱データ
-   * @returns {object} { year, month, day, hour } それぞれの十二運
-   */
-  getJuniun(dayKanIdx, pillars) {
-    const tbl = JUNIUN_TABLE[dayKanIdx] || Array(12).fill(0);
-    const get = (shiIdx) => JUNIUN[tbl[shiIdx]];
-    return {
-      year:  get(pillars.year.shiIdx),
-      month: get(pillars.month.shiIdx),
-      day:   get(pillars.day.shiIdx),
-      hour:  get(pillars.hour.shiIdx),
-    };
+  getJuniun(dk, pillars) {
+    const t=JUNIUN_TABLE[dk]||Array(12).fill(0);
+    return { year:JUNIUN[t[pillars.year.shiIdx]], month:JUNIUN[t[pillars.month.shiIdx]], day:JUNIUN[t[pillars.day.shiIdx]], hour:JUNIUN[t[pillars.hour.shiIdx]] };
+  },
+  getZokanTs(dk, pillars) {
+    const r={};
+    ['year','month','day','hour'].forEach(k=>{
+      const z=ZOKAN[JUNISHI[pillars[k].shiIdx].name];
+      if(z) r[k]={ honki:z.honki!=null?getTsuhensei(dk,z.honki):null, chuuki:z.chuuki!=null?getTsuhensei(dk,z.chuuki):null };
+    });
+    return r;
   },
 };
 
-// =============================================
-// StrengthEngine — 身強・身弱の簡易判定
-// =============================================
 const StrengthEngine = {
-  /**
-   * 日干の五行と、月支・時支の五行関係から身強・身弱を簡易判定
-   * 本格版では蔵干・大運・流年なども考慮する
-   * @returns {{ label, power, desc }}
-   */
-  judge(dayKanIdx, pillars, gogyouCount) {
-    const myElem = JIKKAN[dayKanIdx].element;
-    const myCount = gogyouCount[myElem];
+  judge(dk, pillars, gogyouCount) {
+    let score = 0;
+    const mr = AttributesEngine.getMonthRei(dk, pillars.month.shiIdx);
+    const strong = ["比肩","劫財","印綬","偏印"];
+    score += (mr && strong.includes(mr)) ? 30 : -20;
+    [getTsuhensei(dk,pillars.year.kanIdx),getTsuhensei(dk,pillars.month.kanIdx),getTsuhensei(dk,pillars.hour.kanIdx)]
+      .forEach(ts => { score += strong.includes(ts) ? 10 : -5; });
+    const myElem = JIKKAN[dk].element;
+    const sup = {"木":["水","木"],"火":["木","火"],"土":["火","土"],"金":["土","金"],"水":["金","水"]}[myElem]||[];
     const total = Object.values(gogyouCount).reduce((a,b)=>a+b,0);
-    const ratio = myCount / total;
+    const supR = sup.reduce((a,e)=>a+(gogyouCount[e]||0),0)/total;
+    score += Math.round((supR-0.4)*50);
+    const power = Math.min(100,Math.max(0,50+score));
+    return score>=0
+      ? { label:"身強", power, color:"#5ba87a", desc:"日干のエネルギーが強い「身強」です。月令を味方につけており、積極的に行動することで運が開けます。" }
+      : { label:"身弱", power, color:"#4a7eb8", desc:"日干のエネルギーが控えめな「身弱」です。人の助けや環境の力を借りながら進むことで大きな力になります。" };
+  },
+};
 
-    // 月支との相生・比和チェック
-    const monthElem = JUNISHI[pillars.month.shiIdx].element;
-    const supportMap = {
-      "木": ["水","木"], "火": ["木","火"], "土": ["火","土"],
-      "金": ["土","金"], "水": ["金","水"],
-    };
-    const isSupported = supportMap[myElem]?.includes(monthElem);
-
-    let power = Math.round(ratio * 100);
-    if (isSupported) power = Math.min(100, power + 15);
-
-    if (power >= 40) {
-      return { label: "身強", power, color: "#4a7c59",
-        desc: "日干のエネルギーが強い「身強」です。積極的に行動することで運が開けます。自分のペースで物事を進める力があります。" };
-    } else {
-      return { label: "身弱", power, color: "#1a6b8a",
-        desc: "日干のエネルギーが控えめな「身弱」です。人の助けを借りながら進むことで大きな力になります。感受性が豊かで直感が鋭いのも特徴。" };
+const DaiunEngine = {
+  calculate(birthYear, birthMonth, birthDay, gender, pillars) {
+    const yy = JIKKAN[pillars.year.kanIdx].yin_yang;
+    const isJunko = (yy==="陽"&&gender==="男")||(yy==="陰"&&gender==="女");
+    const startAge = this.calcStartAge(birthYear, birthMonth, birthDay, isJunko);
+    let k=pillars.month.kanIdx, s=pillars.month.shiIdx;
+    const list = [];
+    for(let i=0;i<8;i++){
+      k=isJunko?(k+1)%10:((k-1)+10)%10;
+      s=isJunko?(s+1)%12:((s-1)+12)%12;
+      const age=startAge+i*10;
+      const ts=getTsuhensei(pillars.day.kanIdx,k);
+      list.push({ age, endAge:age+9, kan:JIKKAN[k], shi:JUNISHI[s], tsuhen:ts,
+        juniun:JUNIUN[JUNIUN_TABLE[pillars.day.kanIdx]?.[s]??0],
+        interp:DAIUNN_INTERPRETATIONS[ts]||"" });
     }
+    return { startAge, isJunko, list };
+  },
+  calcStartAge(year, month, day, isJunko) {
+    const base = [6,4,6,5,6,6,7,7,8,8,7,7];
+    const corr = (RISSHUN_DAYS[year]||4)-4;
+    let days=0, m=month, d=day, y=year;
+    for(let i=0;i<60;i++){
+      isJunko ? d++ : d--;
+      days++;
+      if(isJunko){
+        const dim=new Date(y,m,0).getDate();
+        if(d>dim){d=1;m++;if(m>12){m=1;y++;}}
+        if(d===base[m-1]+corr) break;
+      } else {
+        if(d<1){m--;if(m<1){m=12;y--;}d=new Date(y,m,0).getDate();}
+        if(d===base[m-1]+corr) break;
+      }
+    }
+    return Math.max(1,Math.round(days/3));
   },
 };
 
-// =============================================
-// FortuneEngine — 年運・月運・日運
-// =============================================
 const FortuneEngine = {
-  /**
-   * 今日の日運（今日の干支 + 命式の日柱との相性）
-   * @param {object} birthPillars 生年月日の四柱
-   * @param {Date} today 今日の日付
-   * @returns {object} 日運情報
-   */
   getDailyFortune(birthPillars, today) {
-    const dayPillar = CalendarEngine.getDayGanZhi(
-      today.getFullYear(), today.getMonth() + 1, today.getDate()
-    );
-    const todayKan = JIKKAN[dayPillar.kanIdx];
-    const todayShi = JUNISHI[dayPillar.shiIdx];
-
-    // 今日の五行エネルギー
-    const mainElement = todayKan.element;
-    const gogyo = GOGYO[mainElement];
-
-    // 今日のステータス計算（簡易版）
-    // 日干との相生・相剋で各値が変化
-    const dayKanIdx = birthPillars.day.kanIdx;
-    const rel = getTsuhensei(dayKanIdx, dayPillar.kanIdx);
-    const tsuhenInfo = TSUHENSEI[rel] || TSUHENSEI["比肩"];
-
-    // ステータス値（40-100の範囲）
-    const base = 55;
+    const dp = CalendarEngine.getDayGanZhi(today.getFullYear(), today.getMonth()+1, today.getDate());
+    const rel = getTsuhensei(birthPillars.day.kanIdx, dp.kanIdx);
+    const mainElem = JIKKAN[dp.kanIdx].element;
     const statusMap = {
-      "比肩": { action: 85, judge: 70, social: 75, money: 60 },
-      "劫財": { action: 90, judge: 60, social: 65, money: 55 },
-      "食神": { action: 70, judge: 75, social: 80, money: 70 },
-      "傷官": { action: 65, judge: 85, social: 60, money: 65 },
-      "偏財": { action: 75, judge: 70, social: 85, money: 90 },
-      "正財": { action: 60, judge: 80, social: 75, money: 85 },
-      "偏官": { action: 80, judge: 65, social: 70, money: 75 },
-      "正官": { action: 70, judge: 90, social: 80, money: 75 },
-      "偏印": { action: 60, judge: 90, social: 65, money: 60 },
-      "印綬": { action: 65, judge: 85, social: 70, money: 65 },
+      "比肩":{action:85,judge:70,social:75,money:60},
+      "劫財":{action:90,judge:60,social:65,money:55},
+      "食神":{action:70,judge:75,social:80,money:70},
+      "傷官":{action:65,judge:85,social:60,money:65},
+      "偏財":{action:75,judge:70,social:85,money:90},
+      "正財":{action:60,judge:80,social:75,money:85},
+      "偏官":{action:80,judge:65,social:70,money:75},
+      "正官":{action:70,judge:90,social:80,money:75},
+      "偏印":{action:60,judge:90,social:65,money:60},
+      "印綬":{action:65,judge:85,social:70,money:65},
     };
-    const status = statusMap[rel] || { action: base, judge: base, social: base, money: base };
-
-    // ミッションとアドバイスをランダム選択（日付ベースで安定した選択）
-    const seed = today.getDate() + today.getMonth() * 31;
-    const missions = MISSIONS[mainElement] || MISSIONS["土"];
-    const avoids = AVOID_ACTIONS[mainElement] || AVOID_ACTIONS["土"];
-    const mission = missions[seed % missions.length];
-    const avoid1 = avoids[seed % avoids.length];
-    const avoid2 = avoids[(seed + 1) % avoids.length];
-
-    // 一言アドバイス
-    const advice = this.getAdvice(rel, todayShi.name, mainElement);
-
+    const status = statusMap[rel]||{action:55,judge:55,social:55,money:55};
+    const seed = today.getDate()+today.getMonth()*31;
+    const ms = MISSIONS[mainElem]||MISSIONS["土"];
+    const av = AVOID_ACTIONS[mainElem]||AVOID_ACTIONS["土"];
     return {
-      dayPillar,
-      todayKan,
-      todayShi,
-      mainElement,
-      gogyo,
-      tsuhensei: rel,
-      tsuhenInfo,
-      status,
-      mission,
-      avoids: [avoid1, avoid2],
-      advice,
+      dayPillar:dp,
+      todayKan:JIKKAN[dp.kanIdx],
+      todayShi:JUNISHI[dp.shiIdx],
+      mainElement:mainElem,
+      gogyo:GOGYO[mainElem],
+      tsuhensei:rel,
+      status, mission:ms[seed%ms.length],
+      avoids:[av[seed%av.length],av[(seed+1)%av.length]],
+      advice:this.getAdvice(rel, JUNISHI[dp.shiIdx].name, mainElem),
     };
   },
-
-  /**
-   * 一言アドバイスを生成
-   */
-  getAdvice(tsuhensei, shiName, element) {
-    const adviceMap = {
-      "比肩": `今日は自分軸で動く日。${shiName}の力を借りて、一歩踏み出してください。`,
-      "劫財": `競争心が高まる日。エネルギーをポジティブな方向へ向けましょう。`,
-      "食神": `あなたの才能が輝く日。${element}のエネルギーで楽しみながら動くと◎`,
-      "傷官": `鋭い感性が冴える日。創造的な作業や表現活動に最適です。`,
-      "偏財": `行動がお金を引き寄せる日。動けば動くほど財運が高まります。`,
-      "正財": `堅実な積み重ねが報われる日。コツコツが今日の正解です。`,
-      "偏官": `強いエネルギーが流れる日。集中力を高めて難題に挑みましょう。`,
-      "正官": `信頼と誠実さが評価される日。約束は必ず守ることが大切。`,
-      "偏印": `直感力が冴える日。第一印象を大切にすると好結果が出ます。`,
-      "印綬": `学びと成長の日。インプットした知識がすぐに活きてきます。`,
+  getAdvice(ts, shiName, elem) {
+    const m={
+      "比肩":`今日は自分軸で動く日。${shiName}の力を借りて一歩踏み出して。`,
+      "劫財":"競争心が高まる日。エネルギーをポジティブな方向へ。",
+      "食神":`才能が輝く日。${elem}のエネルギーで楽しみながら動くと◎`,
+      "傷官":"鋭い感性が冴える日。創造的な作業に最適。",
+      "偏財":"行動がお金を引き寄せる日。動けば動くほど財運が高まる。",
+      "正財":"堅実な積み重ねが報われる日。コツコツが今日の正解。",
+      "偏官":"強いエネルギーが流れる日。集中して難題に挑もう。",
+      "正官":"信頼と誠実さが評価される日。約束を守ることが大切。",
+      "偏印":"直感力が冴える日。第一印象を大切にすると好結果。",
+      "印綬":"学びと成長の日。インプットした知識がすぐに活きる。",
     };
-    return adviceMap[tsuhensei] || `今日も${element}のエネルギーとともに、着実に進みましょう。`;
+    return m[ts]||`今日も${elem}のエネルギーとともに着実に進もう。`;
   },
 };
 
 // =============================================
-// InterpretationEngine — 結果を文章に変換
+// テーマ生成（今日の「一言テーマ」）
 // =============================================
-const InterpretationEngine = {
-  /**
-   * 命式全体の総合解釈文を生成
-   */
-  summarize(pillars, strength, gogyouBalance) {
-    const dayKan = JIKKAN[pillars.day.kanIdx];
-    const dayShi = JUNISHI[pillars.day.shiIdx];
-    const dominantElem = Object.entries(gogyouBalance).sort((a,b) => b[1]-a[1])[0][0];
-    const weakElem = Object.entries(gogyouBalance).sort((a,b) => a[1]-b[1])[0][0];
-
-    return `あなたの日干は「${dayKan.name}（${dayKan.reading}）」。${dayKan.desc}` +
-      `日支は「${dayShi.name}（${dayShi.reading}）」で、${dayShi.desc}` +
-      `五行バランスでは「${dominantElem}」が最も強く、${GOGYO[dominantElem].desc}の性質が際立っています。` +
-      `「${weakElem}」はやや少なめなので、意識的に${GOGYO[weakElem].keywords.slice(0,2).join('・')}を取り入れると好バランスになります。`;
-  },
-};
+function getTodayTheme(fortune, strength) {
+  const elem = fortune.mainElement;
+  const ts   = fortune.tsuhensei;
+  const themeMap = {
+    "木": { theme: "育てる日", emoji: "🌿", sub: `今日は${elem}の力が満ちる日` },
+    "火": { theme: "輝く日",   emoji: "🔥", sub: `今日は${elem}の情熱が高まる日` },
+    "土": { theme: "整える日", emoji: "🏔️", sub: `今日は${elem}の安定が流れる日` },
+    "金": { theme: "磨く日",   emoji: "⚔️", sub: `今日は${elem}の決断力が冴える日` },
+    "水": { theme: "流れる日", emoji: "💧", sub: `今日は${elem}の知恵が深まる日` },
+  };
+  // 通変星による補正
+  const tsThemes = {
+    "食神":"楽しむ日","傷官":"表現する日","偏財":"動く日","正財":"積む日",
+    "偏官":"挑む日","正官":"誠実な日","偏印":"感じる日","印綬":"学ぶ日",
+    "比肩":"自分を生きる日","劫財":"勝負の日",
+  };
+  const base = themeMap[elem] || { theme:"今日も進む日", emoji:"✨", sub:"今日も命式の力を活かして" };
+  if (tsThemes[ts]) base.theme = tsThemes[ts];
+  return base;
+}
 
 // =============================================
-// AppController — UIとロジックをつなぐ制御層
+// AppController
 // =============================================
 const AppController = {
   userData: null,
   pillars: null,
   fortune: null,
+  daiunData: null,
 
-  /**
-   * メイン処理：フォーム送信時に呼ばれる
-   */
   calculate() {
-    // 入力値を取得
-    const name  = document.getElementById('input-name').value.trim() || 'あなた';
-    const dateVal = document.getElementById('input-date').value;
-    const timeVal = document.getElementById('input-time').value;
+    const name   = document.getElementById('input-name').value.trim() || 'あなた';
+    const dv     = document.getElementById('input-date').value;
+    const tv     = document.getElementById('input-time').value;
+    const gender = document.getElementById('input-gender').value;
+    if (!dv) { alert('生年月日を入力してください'); return; }
+    const [year,month,day] = dv.split('-').map(Number);
+    const hour = tv ? parseInt(tv.split(':')[0]) : 12;
 
-    if (!dateVal) {
-      alert('生年月日を入力してください');
-      return;
-    }
+    this.pillars     = PillarsEngine.calculate(year,month,day,hour);
+    const gc         = AttributesEngine.countGogyou(this.pillars);
+    const gb         = AttributesEngine.getGogyouBalance(gc);
+    const strength   = StrengthEngine.judge(this.pillars.day.kanIdx, this.pillars, gc);
+    const tsuhensei  = StarsEngine.getTsuhensei(this.pillars.day.kanIdx, this.pillars);
+    const zokanTs    = StarsEngine.getZokanTs(this.pillars.day.kanIdx, this.pillars);
+    const juniun     = StarsEngine.getJuniun(this.pillars.day.kanIdx, this.pillars);
+    this.fortune     = FortuneEngine.getDailyFortune(this.pillars, new Date());
+    this.daiunData   = DaiunEngine.calculate(year,month,day,gender,this.pillars);
+    this.userData    = {name,year,month,day,hour,gender};
 
-    const [year, month, day] = dateVal.split('-').map(Number);
-    const hour = timeVal ? parseInt(timeVal.split(':')[0]) : 12; // 未入力は正午
-
-    // 各エンジンで計算
-    this.pillars = PillarsEngine.calculate(year, month, day, hour);
-    const gogyouCount   = AttributesEngine.countGogyou(this.pillars);
-    const gogyouBalance = AttributesEngine.getGogyouBalance(gogyouCount);
-    const strength      = StrengthEngine.judge(this.pillars.day.kanIdx, this.pillars, gogyouCount);
-    const tsuhensei     = StarsEngine.getTsuhensei(this.pillars.day.kanIdx, this.pillars);
-    const juniun        = StarsEngine.getJuniun(this.pillars.day.kanIdx, this.pillars);
-    const summary       = InterpretationEngine.summarize(this.pillars, strength, gogyouBalance);
-    this.fortune        = FortuneEngine.getDailyFortune(this.pillars, new Date());
-
-    this.userData = { name, year, month, day, hour };
-
-    // 画面に表示
     UIRenderer.render({
-      name, pillars: this.pillars,
-      gogyouCount, gogyouBalance,
-      strength, tsuhensei, juniun,
-      summary, fortune: this.fortune,
+      name, pillars:this.pillars,
+      gogyouCount:gc, gogyouBalance:gb,
+      strength, tsuhensei, zokanTs, juniun,
+      fortune:this.fortune,
+      daiunData:this.daiunData, birthYear:year,
     });
   },
 };
 
 // =============================================
-// UIRenderer — 画面描画担当
+// UIRenderer v3 — 全面刷新
 // =============================================
 const UIRenderer = {
   render(data) {
-    // 入力セクションを隠して結果を表示
     document.getElementById('section-input').classList.add('hidden');
-    document.getElementById('section-result').classList.remove('hidden');
-    document.getElementById('section-result').classList.add('fade-in');
+    const rs = document.getElementById('section-result');
+    rs.classList.remove('hidden');
+    rs.classList.add('fade-in');
 
-    this.renderHeader(data);
-    this.renderPillars(data);
-    this.renderGogyou(data);
-    this.renderStars(data);
-    this.renderStrength(data);
-    this.renderFortune(data);
+    this.renderHero(data);
+    this.renderStatusGrid(data);
     this.renderMission(data);
+    this.renderPillarsDetail(data);
+    this.renderDaiunDetail(data);
 
-    // スクロールをトップへ
     window.scrollTo({ top: 0, behavior: 'smooth' });
   },
 
-  renderHeader(data) {
-    document.getElementById('result-name').textContent = data.name + ' さんの命式';
-    const dayKan = JIKKAN[data.pillars.day.kanIdx];
-    document.getElementById('result-subtitle').textContent =
-      `日干：${dayKan.name}（${dayKan.reading}） ／ ${data.strength.label}`;
-  },
-
-  renderPillars(data) {
-    const pillars = data.pillars;
-    const labels = ['year','month','day','hour'];
-    const jpLabels = ['年柱','月柱','日柱','時柱'];
-    const container = document.getElementById('pillars-grid');
-    container.innerHTML = '';
-
-    labels.forEach((key, i) => {
-      const p = pillars[key];
-      const kan = JIKKAN[p.kanIdx];
-      const shi = JUNISHI[p.shiIdx];
-      const div = document.createElement('div');
-      div.className = 'pillar-card';
-      div.innerHTML = `
-        <div class="pillar-label">${jpLabels[i]}</div>
-        <div class="pillar-kanji">
-          <span class="pillar-kan" style="color:${GOGYO[kan.element].color}">${kan.name}</span>
-          <span class="pillar-shi" style="color:${GOGYO[shi.element].color}">${shi.name}</span>
-        </div>
-        <div class="pillar-reading">${kan.reading} / ${shi.reading}</div>
-        <div class="pillar-elem">
-          <span class="badge" style="background:${GOGYO[kan.element].color}20;color:${GOGYO[kan.element].color}">${kan.element}・${kan.yin_yang}</span>
-          <span class="badge" style="background:${GOGYO[shi.element].color}20;color:${GOGYO[shi.element].color}">${shi.element}・${shi.yin_yang}</span>
-        </div>
-      `;
-      container.appendChild(div);
-    });
-  },
-
-  renderGogyou(data) {
-    const balance = data.gogyouBalance;
-    const container = document.getElementById('gogyou-bars');
-    container.innerHTML = '';
-    const order = ["木","火","土","金","水"];
-    order.forEach(elem => {
-      const pct = balance[elem] || 0;
-      const g = GOGYO[elem];
-      container.innerHTML += `
-        <div class="gogyou-row">
-          <div class="gogyou-label">
-            <span class="gogyou-emoji">${g.emoji}</span>
-            <span class="gogyou-name">${elem}</span>
-            <span class="gogyou-sub">${g.desc}</span>
-          </div>
-          <div class="gogyou-bar-wrap">
-            <div class="gogyou-bar" style="width:${pct}%;background:${g.color}"></div>
-          </div>
-          <span class="gogyou-pct">${pct}%</span>
-        </div>
-      `;
-    });
-  },
-
-  renderStars(data) {
-    const container = document.getElementById('stars-grid');
-    container.innerHTML = '';
-    const entries = [
-      { label: '年柱', ts: data.tsuhensei.year, ju: data.juniun.year },
-      { label: '月柱', ts: data.tsuhensei.month, ju: data.juniun.month },
-      { label: '日柱', ts: '（日主）', ju: data.juniun.day },
-      { label: '時柱', ts: data.tsuhensei.hour, ju: data.juniun.hour },
-    ];
-    entries.forEach(e => {
-      const tsInfo = e.ts !== '（日主）' ? TSUHENSEI[e.ts] : null;
-      const div = document.createElement('div');
-      div.className = 'star-card';
-      div.innerHTML = `
-        <div class="star-pillar-label">${e.label}</div>
-        <div class="star-tsuhen">
-          ${tsInfo
-            ? `<span class="star-name" style="color:${tsInfo.color}">${e.ts}</span><span class="star-short">${tsInfo.short}</span>`
-            : `<span class="star-self">日主</span>`}
-        </div>
-        <div class="star-juniun">
-          <span class="juniun-name">${e.ju.name}</span>
-          <div class="juniun-bar-wrap">
-            <div class="juniun-bar" style="width:${e.ju.power}%"></div>
-          </div>
-        </div>
-      `;
-      container.appendChild(div);
-    });
-  },
-
-  renderStrength(data) {
-    const s = data.strength;
-    document.getElementById('strength-label').textContent = s.label;
-    document.getElementById('strength-label').style.color = s.color;
-    document.getElementById('strength-bar').style.width = s.power + '%';
-    document.getElementById('strength-bar').style.background = s.color;
-    document.getElementById('strength-desc').textContent = s.desc;
-  },
-
-  renderFortune(data) {
+  // ① ヒーローエリア（今日のテーマ・干支）
+  renderHero(data) {
     const f = data.fortune;
+    const theme = getTodayTheme(f, data.strength);
     const today = new Date();
-    const dateStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日`;
+    const dateStr = `${today.getFullYear()}年${today.getMonth()+1}月${today.getDate()}日（${['日','月','火','水','木','金','土'][today.getDay()]}）`;
 
-    document.getElementById('fortune-date').textContent = dateStr + ' の日運';
-    document.getElementById('fortune-kan').textContent = f.todayKan.name;
-    document.getElementById('fortune-kan').style.color = GOGYO[f.mainElement].color;
-    document.getElementById('fortune-shi').textContent = f.todayShi.name;
-    document.getElementById('fortune-shi').style.color = GOGYO[f.todayShi.element].color;
-    document.getElementById('fortune-elem').textContent = `本日の主五行：${f.mainElement} ${f.gogyo.emoji}`;
-    document.getElementById('fortune-tsuhen').textContent = `今日の通変星：${f.tsuhensei}（${f.tsuhenInfo?.short || ''}）`;
+    document.getElementById('today-date').textContent = dateStr;
+    document.getElementById('today-theme').innerHTML =
+      theme.theme + `<span class="today-theme-emoji">${theme.emoji}</span>`;
+    document.getElementById('today-sub').textContent = theme.sub;
 
-    // ステータスゲージ
-    const statContainer = document.getElementById('status-gauges');
-    statContainer.innerHTML = '';
-    const stats = [
-      { label: '⚡ 行動力', value: f.status.action },
-      { label: '🧠 判断力', value: f.status.judge },
-      { label: '🤝 対人運', value: f.status.social },
-      { label: '💰 金運',   value: f.status.money },
-    ];
-    stats.forEach(st => {
-      const level = st.value >= 80 ? 'high' : st.value >= 60 ? 'mid' : 'low';
-      statContainer.innerHTML += `
-        <div class="stat-row">
-          <div class="stat-label">${st.label}</div>
-          <div class="stat-bar-wrap">
-            <div class="stat-bar stat-${level}" style="width:${st.value}%"></div>
-          </div>
-          <span class="stat-value">${st.value}</span>
-        </div>
-      `;
-    });
+    // 干支バッジ
+    document.getElementById('fortune-kan-hero').textContent = f.todayKan.name;
+    document.getElementById('fortune-kan-hero').style.color = GOGYO[f.mainElement].color;
+    document.getElementById('fortune-shi-hero').textContent = f.todayShi.name;
+    document.getElementById('fortune-shi-hero').style.color = GOGYO[f.todayShi.element].color;
+    document.getElementById('fortune-tsuhen-hero').textContent = f.tsuhensei;
 
-    document.getElementById('fortune-advice').textContent = f.advice;
+    // ユーザー名（サブタイトルに）
+    document.getElementById('result-user').textContent = data.name + ' さん';
+
+    // 身強・身弱バッジ
+    const sb = document.getElementById('strength-badge');
+    sb.className = `strength-badge ${data.strength.label === '身強' ? 'strength-badge-strong' : 'strength-badge-weak'}`;
+    sb.innerHTML = `<span class="strength-badge-dot"></span>${data.strength.label}：${data.strength.desc.slice(0,20)}…`;
   },
 
+  // ② ステータスカードグリッド
+  renderStatusGrid(data) {
+    const s = data.fortune.status;
+    const stats = [
+      { icon:'⚡', name:'行動力', value:s.action },
+      { icon:'🧠', name:'判断力', value:s.judge  },
+      { icon:'🤝', name:'対人運', value:s.social },
+      { icon:'💰', name:'金運',   value:s.money  },
+    ];
+    const container = document.getElementById('status-grid');
+    container.innerHTML = '';
+    stats.forEach((st, i) => {
+      const cls = st.value >= 80 ? 'high' : st.value >= 60 ? 'mid' : 'low';
+      const card = document.createElement('div');
+      card.className = 'status-card';
+      card.style.animationDelay = `${0.15 + i*0.1}s`;
+      card.innerHTML = `
+        <span class="status-icon">${st.icon}</span>
+        <div class="status-name">${st.name}</div>
+        <div class="status-value val-${cls}">${st.value}</div>
+        <div class="status-gauge">
+          <div class="status-gauge-fill fill-${cls}" style="width:0%" data-target="${st.value}"></div>
+        </div>`;
+      container.appendChild(card);
+    });
+    // ゲージアニメーション（少し遅らせて）
+    setTimeout(() => {
+      document.querySelectorAll('.status-gauge-fill').forEach(el => {
+        el.style.width = el.dataset.target + '%';
+      });
+    }, 300);
+  },
+
+  // ③ ミッション・アドバイス
   renderMission(data) {
     const f = data.fortune;
     document.getElementById('mission-text').textContent = f.mission;
-    document.getElementById('avoid-list').innerHTML = f.avoids
-      .map(a => `<li>✗ ${a}</li>`).join('');
+    document.getElementById('advice-text').textContent = f.advice;
+    const avoidList = document.getElementById('avoid-list');
+    avoidList.innerHTML = f.avoids.map(a => `<li>${a}</li>`).join('');
+  },
+
+  // ④ 命式詳細（展開セクション内）
+  renderPillarsDetail(data) {
+    const container = document.getElementById('pillars-compact');
+    container.innerHTML = '';
+    const labels = ['年','月','日','時'];
+    ['year','month','day','hour'].forEach((key, i) => {
+      const p = data.pillars[key];
+      const kan = JIKKAN[p.kanIdx];
+      const shi = JUNISHI[p.shiIdx];
+      const z = ZOKAN[shi.name];
+      let zokanStr = '';
+      if (z) {
+        const parts = [];
+        if (z.honki  != null) parts.push(JIKKAN[z.honki].name);
+        if (z.chuuki != null) parts.push(JIKKAN[z.chuuki].name);
+        if (z.yoki   != null) parts.push(JIKKAN[z.yoki].name);
+        zokanStr = parts.join(' ');
+      }
+      const div = document.createElement('div');
+      div.className = 'pillar-mini';
+      div.innerHTML = `
+        <div class="pillar-mini-label">${labels[i]}柱</div>
+        <span class="pillar-mini-kan" style="color:${GOGYO[kan.element].color}">${kan.name}</span>
+        <span class="pillar-mini-shi" style="color:${GOGYO[shi.element].color}">${shi.name}</span>
+        <div class="pillar-mini-zokan">${zokanStr}</div>`;
+      container.appendChild(div);
+    });
+
+    // 五行バー
+    const gb = data.gogyouBalance;
+    const gbContainer = document.getElementById('gogyou-compact');
+    gbContainer.innerHTML = '';
+    ["木","火","土","金","水"].forEach(elem => {
+      const pct = gb[elem] || 0;
+      const g = GOGYO[elem];
+      gbContainer.innerHTML += `
+        <div class="gogyou-compact-row">
+          <span class="gogyou-compact-name" style="color:${g.color}">${elem}</span>
+          <div class="gogyou-compact-bar">
+            <div class="gogyou-compact-fill" style="width:${pct}%;background:${g.color}"></div>
+          </div>
+          <span class="gogyou-compact-pct">${pct}%</span>
+        </div>`;
+    });
+
+    // 身強・身弱（詳細テキスト）
+    document.getElementById('strength-detail').textContent = data.strength.desc;
+  },
+
+  // ⑤ 大運詳細（展開セクション内）
+  renderDaiunDetail(data) {
+    const d = data.daiunData;
+    const currentAge = new Date().getFullYear() - data.birthYear;
+    document.getElementById('daiun-startage-detail').textContent =
+      `起運 ${d.startAge}歳 ／ ${d.isJunko ? '順行' : '逆行'}`;
+
+    const container = document.getElementById('daiun-compact');
+    container.innerHTML = '';
+    d.list.forEach(run => {
+      const isCurrent = currentAge >= run.age && currentAge <= run.endAge;
+      const ti = TSUHENSEI[run.tsuhen] || {};
+      const div = document.createElement('div');
+      div.className = `daiun-compact-item${isCurrent ? ' current' : ''}`;
+      div.innerHTML = `
+        <span class="daiun-compact-age">${run.age}〜${run.endAge}歳</span>
+        <span class="daiun-compact-kanshi">
+          <span style="color:${GOGYO[run.kan.element].color}">${run.kan.name}</span><span style="color:${GOGYO[run.shi.element].color}">${run.shi.name}</span>
+        </span>
+        <span class="daiun-compact-tsuhen" style="color:${ti.color||'#c9a84c'}">${run.tsuhen}</span>
+        ${isCurrent ? '<span class="daiun-compact-now">▶ 現在</span>' : ''}`;
+      div.title = run.interp;
+      container.appendChild(div);
+    });
   },
 };
 
 // =============================================
-// イベントリスナー設定
+// イベントリスナー
 // =============================================
 document.addEventListener('DOMContentLoaded', () => {
+  // 星空初期化
+  StarField.init();
+
   // 計算ボタン
   document.getElementById('btn-calculate').addEventListener('click', () => {
     AppController.calculate();
   });
 
-  // 入力し直すボタン
+  // 入力に戻る
   document.getElementById('btn-reset').addEventListener('click', () => {
-    document.getElementById('section-input').classList.remove('hidden');
     document.getElementById('section-result').classList.add('hidden');
+    document.getElementById('section-input').classList.remove('hidden');
   });
 
   // プレミアムボタン
-  document.getElementById('btn-premium').addEventListener('click', () => {
-    document.getElementById('premium-modal').classList.remove('hidden');
+  document.querySelectorAll('.btn-premium-trigger').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('premium-modal').classList.remove('hidden');
+    });
   });
   document.getElementById('modal-close').addEventListener('click', () => {
     document.getElementById('premium-modal').classList.add('hidden');
   });
-  document.getElementById('premium-modal').addEventListener('click', (e) => {
+  document.getElementById('premium-modal').addEventListener('click', e => {
     if (e.target === document.getElementById('premium-modal')) {
       document.getElementById('premium-modal').classList.add('hidden');
     }
   });
 
-  // 今日の日付を入力欄のデフォルトに
-  const today = new Date();
-  // デフォルト生年月日は空のまま（ユーザーが入力）
-  // 今日の年-30歳をデフォルトにする例
-  // document.getElementById('input-date').value = `${today.getFullYear()-30}-01-01`;
+  // 展開トグル
+  document.querySelectorAll('.expand-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const content = btn.nextElementSibling;
+      const isOpen = content.classList.contains('open');
+      btn.classList.toggle('open', !isOpen);
+      content.classList.toggle('open', !isOpen);
+    });
+  });
 });

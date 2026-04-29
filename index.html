@@ -2,273 +2,194 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>命式占 — 四柱推命 人生攻略アプリ</title>
-  <meta name="description" content="四柱推命で毎日使える人生攻略アプリ。日運・RPG風ステータス・今日のミッションを表示。">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>命式占 — 今日の流れを知る</title>
+  <meta name="description" content="四柱推命で今日の流れを知る。毎日使える人生攻略アプリ。">
+  <meta name="theme-color" content="#080c14">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- ========== ヘッダー ========== -->
-  <header class="app-header">
-    <div class="header-symbol">☯ 命 運 星</div>
-    <h1 class="app-title">命　式　占</h1>
-    <p class="app-subtitle">四柱推命 × 日運 × 今日のミッション</p>
-  </header>
+  <!-- ===== 背景レイヤー ===== -->
+  <div class="bg-layer">
+    <canvas id="stars-canvas"></canvas>
+    <div class="bg-orb-main"></div>
+    <div class="bg-orb-secondary"></div>
+    <div class="bg-lines"></div>
+  </div>
 
-  <!-- ========== メインコンテナ ========== -->
-  <main class="main-container">
+  <div class="app-wrapper">
 
-    <!-- ===== 入力セクション ===== -->
-    <section id="section-input">
+    <!-- ===== ヘッダー ===== -->
+    <header class="app-header">
+      <div class="header-symbol">命 式 占</div>
+      <h1 class="app-title">MEISHIKI</h1>
+    </header>
 
-      <div class="card">
-        <div class="form-intro">
-          <span class="form-intro-icon">⬡</span>
-          <h2>あなたの命式を算出します</h2>
-          <p>生年月日と出生時間を入力してください<br>
-            <small style="color:var(--text-muted)">出生時間が不明の場合は空欄でもOK（正午として計算）</small>
+    <div class="main-container">
+
+      <!-- ==========================================
+           入力画面
+           ========================================== -->
+      <section id="section-input" class="input-screen">
+
+        <div class="input-hero">
+          <span class="input-hero-icon">☯</span>
+          <h2>あなたの命式を算出する</h2>
+          <p>生年月日を入力してください<br>
+            <span style="font-size:0.75rem;color:#6a5e42">出生時間・性別を入力するとより精密な結果になります</span>
           </p>
         </div>
 
-        <!-- 名前 -->
-        <div class="form-group">
-          <label class="form-label" for="input-name">
-            お名前（ニックネームでも可）
-          </label>
-          <input
-            type="text"
-            id="input-name"
-            class="form-input"
-            placeholder="例：山田 太郎"
-            maxlength="20"
-          >
-        </div>
-
-        <!-- 生年月日 -->
-        <div class="form-group">
-          <label class="form-label" for="input-date">
-            生年月日
-            <span>※ 四柱推命は生年月日が土台です</span>
-          </label>
-          <input
-            type="date"
-            id="input-date"
-            class="form-input"
-            min="1900-01-01"
-            max="2099-12-31"
-          >
-        </div>
-
-        <!-- 出生時間 -->
-        <div class="form-group">
-          <label class="form-label" for="input-time">
-            出生時間（任意）
-            <span>※ 時柱の算出に使います</span>
-          </label>
-          <input
-            type="time"
-            id="input-time"
-            class="form-input"
-          >
-          <!-- 初心者向け補足 -->
-          <div class="term-tooltip">
-            <span class="term-tooltip-icon">ℹ</span>
-            <span>「時柱（じちゅう）」とは、生まれた時間帯から算出される柱のことです。
-            母子手帳などに記録されていれば入力するとより精度が高まります。</span>
+        <div class="form-card">
+          <div class="form-row">
+            <label class="form-label" for="input-name">名前</label>
+            <input type="text" id="input-name" class="form-input" placeholder="山田 太郎" maxlength="20">
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="input-date">生年月日 ＊</label>
+            <input type="date" id="input-date" class="form-input">
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="input-time">出生時間（任意）</label>
+            <input type="time" id="input-time" class="form-input">
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="input-gender">性別（大運計算に使用）</label>
+            <select id="input-gender" class="form-input">
+              <option value="男">男性</option>
+              <option value="女">女性</option>
+            </select>
           </div>
         </div>
 
-        <!-- 計算ボタン -->
-        <button id="btn-calculate" class="btn-primary">
-          ✦ 命式を算出する ✦
+        <button id="btn-calculate" class="btn-cta">
+          ✦ 今日の流れを見る ✦
         </button>
 
-      </div><!-- /card -->
-    </section><!-- /section-input -->
+      </section>
 
+      <!-- ==========================================
+           結果画面
+           ========================================== -->
+      <section id="section-result" class="result-screen hidden">
 
-    <!-- ===== 結果セクション ===== -->
-    <section id="section-result" class="hidden">
+        <!-- ① ヒーロー：今日のテーマ -->
+        <div class="today-hero">
+          <div class="today-date" id="today-date">2025年1月1日（水）</div>
+          <div style="font-size:0.72rem;color:#7a6228;letter-spacing:0.15em;margin-bottom:6px" id="result-user"></div>
+          <div class="today-theme-label">TODAY'S FLOW</div>
+          <div class="today-theme" id="today-theme">整える日 🏔️</div>
+          <div class="today-sub" id="today-sub">今日は土の安定が流れる日</div>
 
-      <!-- 結果ヘッダー -->
-      <div class="result-header">
-        <h2 class="result-name" id="result-name">あなたの命式</h2>
-        <p class="result-subtitle" id="result-subtitle"></p>
-        <div class="result-actions">
-          <button id="btn-reset" class="btn-secondary">← 入力し直す</button>
-          <button id="btn-premium" class="btn-secondary">
-            <span class="premium-crown">♛</span> 相談する（プレミアム）
+          <!-- 今日の干支バッジ -->
+          <div class="today-kanshi-badge">
+            <span class="kanshi-char" id="fortune-kan-hero">甲</span>
+            <span class="kanshi-sep"></span>
+            <span class="kanshi-char" id="fortune-shi-hero">子</span>
+            <span class="kanshi-sep"></span>
+            <span class="kanshi-label" id="fortune-tsuhen-hero">比肩</span>
+          </div>
+
+          <!-- 身強・身弱バッジ -->
+          <div style="margin-top:12px">
+            <div id="strength-badge" class="strength-badge strength-badge-strong">
+              <span class="strength-badge-dot"></span>身強
+            </div>
+          </div>
+        </div>
+
+        <!-- ② ステータスカード -->
+        <div class="status-section">
+          <div class="section-label">今日のステータス</div>
+          <div id="status-grid" class="status-grid"></div>
+        </div>
+
+        <!-- ③ 今日の一手（ミッション） -->
+        <div class="mission-card-big">
+          <div class="mission-tag">今日の一手</div>
+          <div class="mission-title">
+            <span id="mission-text">机の上を整える</span>
+            <span class="mission-title-emoji">🌟</span>
+          </div>
+          <div class="mission-body" id="advice-text" style="margin-top:10px"></div>
+        </div>
+
+        <!-- ④ アドバイス（やらない方がいいこと） -->
+        <div class="avoid-card">
+          <div class="avoid-title">✗ 今日は避けた方がいいこと</div>
+          <ul class="avoid-list" id="avoid-list"></ul>
+        </div>
+
+        <!-- ⑤ 展開セクション：命式の詳細 -->
+        <div class="expand-section">
+          <button class="expand-toggle" aria-expanded="false">
+            <span>命式の詳細を見る</span>
+            <span class="expand-arrow">▾</span>
+          </button>
+          <div class="expand-content">
+            <div class="expand-inner">
+              <!-- 四柱 -->
+              <div class="section-label" style="margin-bottom:10px">四柱（蔵干付き）</div>
+              <div id="pillars-compact" class="pillars-compact" style="margin-bottom:20px"></div>
+
+              <!-- 五行バランス -->
+              <div class="section-label" style="margin-bottom:10px">五行バランス（蔵干込み）</div>
+              <div id="gogyou-compact" class="gogyou-compact" style="margin-bottom:16px"></div>
+
+              <!-- 身強・身弱詳細 -->
+              <div class="section-label" style="margin-bottom:8px">身強・身弱</div>
+              <p id="strength-detail" style="font-size:0.82rem;color:#b8a880;line-height:1.8"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑥ 展開セクション：大運 -->
+        <div class="expand-section">
+          <button class="expand-toggle" aria-expanded="false">
+            <span>大運（10年の流れ）を見る</span>
+            <span class="expand-arrow">▾</span>
+          </button>
+          <div class="expand-content">
+            <div class="expand-inner">
+              <div class="section-label" style="margin-bottom:8px" id="daiun-startage-detail"></div>
+              <div id="daiun-compact" class="daiun-compact"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ⑦ アクションボタン -->
+        <div class="action-buttons" style="margin-top:24px">
+          <button id="btn-reset" class="btn-action btn-action-ghost">
+            ← 入力に戻る
+          </button>
+          <button class="btn-action btn-action-gold btn-premium-trigger">
+            ♛ 相談する
           </button>
         </div>
-      </div>
 
-      <!-- ─────────────────────────────────
-           1. 四柱（年柱・月柱・日柱・時柱）
-           ───────────────────────────────── -->
-      <div class="card">
-        <div class="card-title">
-          ☰ 命式（四柱）
-        </div>
-        <!-- 初心者向け説明 -->
-        <div class="term-tooltip" style="margin-bottom: 16px;">
-          <span class="term-tooltip-icon">ℹ</span>
-          <span>「四柱（しちゅう）」とは、生年月日時をそれぞれ干支（かんし）に変換した4つの柱のことです。
-          この組み合わせがあなたの「命式」になります。上段が十干（てんのエネルギー）、下段が十二支（ちのエネルギー）です。</span>
-        </div>
-        <div id="pillars-grid" class="pillars-grid"></div>
-      </div>
+      </section>
+    </div><!-- /main-container -->
+  </div><!-- /app-wrapper -->
 
-      <!-- ─────────────────────────────────
-           2. 五行バランス
-           ───────────────────────────────── -->
-      <div class="card">
-        <div class="card-title">
-          ⊕ 五行バランス
-        </div>
-        <div class="term-tooltip" style="margin-bottom: 16px;">
-          <span class="term-tooltip-icon">ℹ</span>
-          <span>「五行（ごぎょう）」とは、木・火・土・金・水の5つのエネルギーのこと。
-          命式の中でどの要素が多いかで、あなたの性質や得意分野がわかります。</span>
-        </div>
-        <div id="gogyou-bars" class="gogyou-bars"></div>
-      </div>
-
-      <!-- ─────────────────────────────────
-           3. 通変星・十二運
-           ───────────────────────────────── -->
-      <div class="card">
-        <div class="card-title">
-          ✦ 通変星・十二運
-        </div>
-        <div class="term-tooltip" style="margin-bottom: 16px;">
-          <span class="term-tooltip-icon">ℹ</span>
-          <span>「通変星（つうへんせい）」は、日干（あなた自身）と他の干の関係を表す10種の星。
-          「十二運（じゅうにうん）」は生命力のフェーズを表します。バーが長いほど力が充実しています。</span>
-        </div>
-        <div id="stars-grid" class="stars-grid"></div>
-      </div>
-
-      <!-- ─────────────────────────────────
-           4. 身強・身弱
-           ───────────────────────────────── -->
-      <div class="card">
-        <div class="card-title">
-          ◈ 身強・身弱
-        </div>
-        <div class="term-tooltip" style="margin-bottom: 16px;">
-          <span class="term-tooltip-icon">ℹ</span>
-          <span>「身強（みきょう）」は日干のエネルギーが強い状態、「身弱（みじゃく）」は控えめな状態。
-          どちらが良い・悪いではなく、それぞれの生き方の指針です。</span>
-        </div>
-        <div class="strength-display">
-          <div id="strength-label" class="strength-label-big">—</div>
-          <div class="strength-meter">
-            <div class="strength-meter-track">
-              <div id="strength-bar" class="strength-meter-bar" style="width:0%"></div>
-            </div>
-            <div class="strength-meter-labels">
-              <span>身弱</span>
-              <span>身強</span>
-            </div>
-          </div>
-        </div>
-        <p id="strength-desc" class="strength-desc"></p>
-      </div>
-
-      <!-- ─────────────────────────────────
-           区切り
-           ───────────────────────────────── -->
-      <div class="section-divider">◆ ◇ ◆</div>
-
-      <!-- ─────────────────────────────────
-           5. 今日の日運
-           ───────────────────────────────── -->
-      <div class="card">
-        <div class="card-title">
-          ☀ 今日の日運
-        </div>
-        <div class="fortune-header">
-          <div class="fortune-date-label" id="fortune-date">今日の日付</div>
-          <div class="fortune-kanshi">
-            <span id="fortune-kan" class="fortune-kan-big">—</span>
-            <span class="fortune-kanshi-sep">✦</span>
-            <span id="fortune-shi" class="fortune-shi-big">—</span>
-          </div>
-          <div class="fortune-elem-info">
-            <div id="fortune-elem"></div>
-            <div id="fortune-tsuhen" style="margin-top:4px"></div>
-          </div>
-        </div>
-
-        <!-- ステータスゲージ -->
-        <div class="card-title" style="margin-top: 8px;">
-          ⚡ 今日のステータス
-        </div>
-        <div id="status-gauges" class="status-gauges"></div>
-
-        <!-- 一言アドバイス -->
-        <div class="advice-box" id="fortune-advice" style="margin-top: 16px;"></div>
-      </div>
-
-      <!-- ─────────────────────────────────
-           6. 今日のミッション
-           ───────────────────────────────── -->
-      <div class="mission-card">
-        <div class="mission-label">★ TODAY'S MISSION</div>
-        <p class="mission-text" id="mission-text"></p>
-
-        <div class="avoid-label">✗ 今日やらない方がいいこと</div>
-        <ul class="avoid-list" id="avoid-list"></ul>
-      </div>
-
-      <!-- ─────────────────────────────────
-           7. プレミアム（相談機能）
-           ───────────────────────────────── -->
-      <div class="premium-section">
-        <div class="premium-label">▽ PREMIUM FEATURE ▽</div>
-        <button id="btn-premium-bottom" class="btn-premium" onclick="document.getElementById('premium-modal').classList.remove('hidden')">
-          <span class="premium-crown">♛</span>
-          AI鑑定師に相談する
-        </button>
-        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:12px;">
-          ※ 相談機能は今後リリース予定のプレミアム機能です
-        </p>
-      </div>
-
-    </section><!-- /section-result -->
-
-  </main>
-
-  <!-- ========== フッター ========== -->
-  <footer class="app-footer">
-    <p class="footer-text">
-      命式占 ／ 四柱推命 人生攻略アプリ<br>
-      <small>※ 計算は簡易版です。本格的な鑑定は専門家にご相談ください。</small>
-    </p>
-  </footer>
-
-  <!-- ========== プレミアムモーダル ========== -->
+  <!-- ===== プレミアムモーダル（ボトムシート） ===== -->
   <div id="premium-modal" class="modal-overlay hidden">
-    <div class="modal-content">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
       <div class="modal-icon">♛</div>
-      <h3 class="modal-title">プレミアム機能</h3>
+      <h3 class="modal-title">AI 鑑定師に相談する</h3>
       <p class="modal-desc">
-        AI鑑定師への相談機能は<br>
-        <strong>プレミアムプラン</strong>でご利用いただけます。<br><br>
-        ・命式に基づいた詳細な人生相談<br>
-        ・恋愛・仕事・転機の詳細鑑定<br>
-        ・大運・流年の本格解説<br><br>
-        近日公開予定です。
+        命式に基づいた詳細な鑑定・相談は<br>
+        プレミアムプランでご利用いただけます。<br><br>
+        恋愛・仕事・転機の詳細鑑定<br>
+        大運・流年の本格解説<br>
+        毎日のAIアドバイス
       </p>
       <button id="modal-close" class="modal-close-btn">閉じる</button>
     </div>
   </div>
 
-  <!-- ========== スクリプト読み込み ========== -->
-  <!-- data.js を先に読み込む（基礎データ定義） -->
   <script src="data.js"></script>
-  <!-- app.js は後に読み込む（ロジック） -->
   <script src="app.js"></script>
 
 </body>
