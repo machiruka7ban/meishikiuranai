@@ -2,195 +2,465 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>命式占 — 今日の流れを知る</title>
-  <meta name="description" content="四柱推命で今日の流れを知る。毎日使える人生攻略アプリ。">
-  <meta name="theme-color" content="#080c14">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>命式占 — 四柱推命 人生攻略</title>
+  <meta name="theme-color" content="#030508">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <!-- ===== 背景レイヤー ===== -->
-  <div class="bg-layer">
-    <canvas id="stars-canvas"></canvas>
-    <div class="bg-orb-main"></div>
-    <div class="bg-orb-secondary"></div>
-    <div class="bg-lines"></div>
-  </div>
+<!-- 背景 -->
+<div class="bg">
+  <canvas id="star-canvas"></canvas>
+  <div class="bg-glow-top"></div>
+  <div class="bg-glow-bot"></div>
+  <div class="bg-hex"></div>
+</div>
 
-  <div class="app-wrapper">
+<!-- ナビゲーションバー（結果画面時に表示） -->
+<nav class="bottom-nav hidden" id="bottom-nav">
+  <button class="nav-btn active" data-page="fortune">
+    <span class="nav-icon">☀</span>
+    <span class="nav-label">今日の運勢</span>
+  </button>
+  <button class="nav-btn" data-page="honshitsu">
+    <span class="nav-icon">🔮</span>
+    <span class="nav-label">あなたとは</span>
+  </button>
+  <button class="nav-btn" data-page="aisho">
+    <span class="nav-icon">🌙</span>
+    <span class="nav-label">相性診断</span>
+  </button>
+</nav>
 
-    <!-- ===== ヘッダー ===== -->
-    <header class="app-header">
-      <div class="header-symbol">命 式 占</div>
-      <h1 class="app-title">MEISHIKI</h1>
-    </header>
+<div class="wrapper">
+<div class="container">
 
-    <div class="main-container">
+  <!-- ヘッダー -->
+  <header class="app-header">
+    <div class="header-ornament">命 式 占 術</div>
+    <h1 class="app-title">命 式 占</h1>
+    <p class="app-subtitle">四柱推命 × タイプ診断 × 相性診断</p>
+  </header>
 
-      <!-- ==========================================
-           入力画面
-           ========================================== -->
-      <section id="section-input" class="input-screen">
+  <!-- ══════════════════════════════
+       入力画面
+       ══════════════════════════════ -->
+  <section id="sec-input">
+    <div class="input-hero">
+      <span class="input-sigil">☯</span>
+      <h2>命式を解読する</h2>
+      <p>生年月日を入力してください<br>
+        <span style="font-size:.75rem;color:#504838">出生時間・性別でさらに精密な結果に</span>
+      </p>
+    </div>
+    <div class="form-card">
+      <div class="form-row">
+        <label class="form-label" for="inp-name">名前（ニックネーム可）</label>
+        <input type="text" id="inp-name" class="form-input" placeholder="山田 太郎" maxlength="20">
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="inp-date">生年月日 ＊</label>
+        <input type="date" id="inp-date" class="form-input" min="1900-01-01" max="2099-12-31">
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="inp-time">出生時間（任意）</label>
+        <input type="time" id="inp-time" class="form-input">
+      </div>
+      <div class="form-row">
+        <label class="form-label" for="inp-gender">性別（大運計算に使用）</label>
+        <select id="inp-gender" class="form-input">
+          <option value="男">男性</option>
+          <option value="女">女性</option>
+        </select>
+      </div>
+    </div>
+    <button id="btn-calc" class="btn-cta">✦ 命式を解読する ✦</button>
+  </section>
 
-        <div class="input-hero">
-          <span class="input-hero-icon">☯</span>
-          <h2>あなたの命式を算出する</h2>
-          <p>生年月日を入力してください<br>
-            <span style="font-size:0.75rem;color:#6a5e42">出生時間・性別を入力するとより精密な結果になります</span>
-          </p>
+  <!-- ══════════════════════════════
+       今日の運勢ページ
+       ══════════════════════════════ -->
+  <section id="sec-fortune" class="result-screen hidden">
+    <div class="user-row" style="margin-top:32px">
+      <span class="user-name" id="user-name-disp"></span>
+      <button class="btn-back" id="btn-back">← 入力に戻る</button>
+    </div>
+
+    <!-- タイプカード -->
+    <div class="type-card" style="animation-delay:0s">
+      <div class="type-tag">あなたの命式タイプ</div>
+      <div id="type-icon" class="type-icon">🌲</div>
+      <div id="type-name" class="type-name">伸び続ける若木</div>
+      <div id="type-title" class="type-title">〜 若木の開拓者 〜</div>
+      <div id="type-desc" class="type-desc"></div>
+      <div id="type-bg-kanji" class="type-card-bg-kanji">甲</div>
+    </div>
+
+    <!-- 今日の運勢カード -->
+    <div class="fortune-card" style="animation-delay:0.08s">
+      <div class="fortune-card-header">
+        <div>
+          <div class="fortune-date-label">TODAY'S FORTUNE</div>
+          <div class="fortune-date" id="fc-date"></div>
+        </div>
+        <div class="rank-badge">
+          <span id="rank-letter" class="rank-letter">B+</span>
+          <div class="rank-info">
+            <div class="rank-label" id="rank-label-text">運気ランク</div>
+            <div class="rank-title" id="rank-title-text">好機の日</div>
+          </div>
+        </div>
+      </div>
+      <div class="fortune-card-body">
+        <div class="kanshi-display">
+          <span id="fc-kan" class="kanshi-char-big">甲</span>
+          <div class="kanshi-mid">
+            <div class="kanshi-sep-line"></div>
+            <div class="kanshi-ts-badge" id="fc-ts">比肩</div>
+            <div class="kanshi-sep-line"></div>
+          </div>
+          <span id="fc-shi" class="kanshi-char-big">子</span>
+        </div>
+        <div class="flow-text" id="fc-flow"></div>
+        <div class="shogo-row">
+          <span class="shogo-label">今日の称号</span>
+          <span class="shogo-value" id="fc-shogo"></span>
+        </div>
+        <div class="kanteibun" id="fc-kanteibun"></div>
+        <div class="kaiun-box">
+          <div class="kaiun-label">今日の一手</div>
+          <div class="kaiun-text" id="fc-mission"></div>
+        </div>
+        <div class="avoid-box">
+          <div class="avoid-label">✕ 避けた方がいいこと</div>
+          <div class="avoid-items" id="fc-avoids"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ステータス -->
+    <div class="status-section">
+      <div class="section-title">今日のステータス</div>
+      <div id="stat-grid" class="status-grid"></div>
+    </div>
+
+    <!-- ラッキー -->
+    <div class="lucky-card">
+      <div class="section-title" id="lucky-title">🌿 今日のラッキー要素</div>
+      <div class="lucky-grid">
+        <div class="lucky-item"><div class="lucky-item-label">ラッキーカラー</div><div class="lucky-item-value" id="lucky-color"></div></div>
+        <div class="lucky-item"><div class="lucky-item-label">ラッキー数字</div><div class="lucky-item-value" id="lucky-number"></div></div>
+        <div class="lucky-item"><div class="lucky-item-label">吉方位</div><div class="lucky-item-value" id="lucky-direction"></div></div>
+        <div class="lucky-item"><div class="lucky-item-label">ラッキーフード</div><div class="lucky-item-value" id="lucky-food"></div></div>
+        <div class="lucky-item"><div class="lucky-item-label">開運タイム</div><div class="lucky-item-value" id="lucky-time"></div></div>
+        <div class="lucky-item"><div class="lucky-item-label">ラッキーアイテム</div><div class="lucky-item-value" id="lucky-item-val"></div></div>
+      </div>
+    </div>
+
+    <!-- 五行バランス -->
+    <div class="gogyou-card">
+      <div class="section-title">五行バランス</div>
+      <div class="gogyou-pentagon">
+        <div class="gogyou-circle-wrap">
+          <svg class="gogyou-svg" id="gogyou-svg" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="gogyou-center-label">主五行<br><span class="gogyou-center-val" id="gogyou-dom"></span></div>
+        </div>
+      </div>
+      <div id="gogyou-bars" class="gogyou-bars-list"></div>
+    </div>
+
+    <!-- 命式詳細 -->
+    <div class="detail-section">
+      <button class="expand-btn"><span>命式の詳細（四柱・身強身弱）</span><span class="expand-icon">▾</span></button>
+      <div class="expand-body">
+        <div class="expand-inner">
+          <div class="section-title" style="margin-bottom:12px">四柱（蔵干付き）</div>
+          <div id="pillars-g4" class="pillars-grid4" style="margin-bottom:20px"></div>
+          <div class="section-title" style="margin-bottom:10px">身強・身弱</div>
+          <div class="strength-row">
+            <span id="str-label" class="strength-label-big">—</span>
+            <div class="strength-track" style="flex:1"><div id="str-bar" class="strength-fill" style="width:0;height:6px;border-radius:3px;transition:width 1s ease"></div></div>
+          </div>
+          <p id="str-desc" class="strength-desc"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 大運 -->
+    <div class="detail-section">
+      <button class="expand-btn"><span>大運（10年ごとの運気の流れ）</span><span class="expand-icon">▾</span></button>
+      <div class="expand-body">
+        <div class="expand-inner">
+          <div class="section-title" style="margin-bottom:10px" id="daiun-info"></div>
+          <div id="daiun-list2" class="daiun-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- プレミアム -->
+    <div class="premium-section">
+      <button class="btn-premium premium-trigger">
+        <span class="premium-crown">♛</span>
+        <div class="premium-texts"><div class="premium-title">AI鑑定師に命式を相談する</div><div class="premium-sub">PREMIUM FEATURE — 準備中</div></div>
+        <span class="premium-arrow">▶</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════
+       あなたはどんな人？ページ
+       ══════════════════════════════ -->
+  <section id="sec-honshitsu" class="result-screen hidden">
+    <div class="honshitsu-hero">
+      <div class="hs-scroll-icon">📜</div>
+      <h2 class="hs-title">あなたはどんな人？</h2>
+      <p class="hs-subtitle" id="hs-subtitle"></p>
+    </div>
+
+    <!-- 各カテゴリのカードを動的生成 -->
+    <div id="honshitsu-cards"></div>
+
+    <div style="height:24px"></div>
+  </section>
+
+  <!-- ══════════════════════════════
+       相性診断ページ
+       ══════════════════════════════ -->
+  <section id="sec-aisho" class="result-screen hidden">
+
+    <!-- 相性入力フォーム -->
+    <div id="aisho-input-area">
+      <div class="aisho-hero">
+        <div class="aisho-icon">🌙</div>
+        <h2 class="aisho-title">相性診断</h2>
+        <p class="aisho-sub">二人の命式から縁の深さを読み解きます</p>
+      </div>
+
+      <div class="aisho-form-wrap">
+        <!-- 関係性 -->
+        <div class="form-card" style="margin-bottom:12px">
+          <div class="form-row">
+            <label class="form-label">二人の関係性</label>
+            <div class="relation-chips" id="relation-chips">
+              <button class="chip active" data-val="恋人">💕 恋人</button>
+              <button class="chip" data-val="片思い">🌹 片思い</button>
+              <button class="chip" data-val="夫婦">💍 夫婦</button>
+              <button class="chip" data-val="友達">🤝 友達</button>
+              <button class="chip" data-val="家族">🏠 家族</button>
+              <button class="chip" data-val="仕事相手">💼 仕事相手</button>
+            </div>
+          </div>
         </div>
 
-        <div class="form-card">
+        <!-- 自分 -->
+        <div class="form-card" style="margin-bottom:12px">
+          <div class="aisho-person-label aisho-me-label">私の情報</div>
           <div class="form-row">
-            <label class="form-label" for="input-name">名前</label>
-            <input type="text" id="input-name" class="form-input" placeholder="山田 太郎" maxlength="20">
+            <label class="form-label" for="a-my-date">生年月日 ＊</label>
+            <input type="date" id="a-my-date" class="form-input" min="1900-01-01" max="2099-12-31">
           </div>
           <div class="form-row">
-            <label class="form-label" for="input-date">生年月日 ＊</label>
-            <input type="date" id="input-date" class="form-input">
+            <label class="form-label" for="a-my-time">出生時間</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="time" id="a-my-time" class="form-input" style="flex:1">
+              <label style="display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--t2);white-space:nowrap;cursor:pointer">
+                <input type="checkbox" id="a-my-notime" style="accent-color:var(--purple)"> 不明
+              </label>
+            </div>
           </div>
-          <div class="form-row">
-            <label class="form-label" for="input-time">出生時間（任意）</label>
-            <input type="time" id="input-time" class="form-input">
-          </div>
-          <div class="form-row">
-            <label class="form-label" for="input-gender">性別（大運計算に使用）</label>
-            <select id="input-gender" class="form-input">
+          <div class="form-row" style="margin-bottom:0">
+            <label class="form-label" for="a-my-gender">性別</label>
+            <select id="a-my-gender" class="form-input">
               <option value="男">男性</option>
               <option value="女">女性</option>
             </select>
           </div>
         </div>
 
-        <button id="btn-calculate" class="btn-cta">
-          ✦ 今日の流れを見る ✦
-        </button>
-
-      </section>
-
-      <!-- ==========================================
-           結果画面
-           ========================================== -->
-      <section id="section-result" class="result-screen hidden">
-
-        <!-- ① ヒーロー：今日のテーマ -->
-        <div class="today-hero">
-          <div class="today-date" id="today-date">2025年1月1日（水）</div>
-          <div style="font-size:0.72rem;color:#7a6228;letter-spacing:0.15em;margin-bottom:6px" id="result-user"></div>
-          <div class="today-theme-label">TODAY'S FLOW</div>
-          <div class="today-theme" id="today-theme">整える日 🏔️</div>
-          <div class="today-sub" id="today-sub">今日は土の安定が流れる日</div>
-
-          <!-- 今日の干支バッジ -->
-          <div class="today-kanshi-badge">
-            <span class="kanshi-char" id="fortune-kan-hero">甲</span>
-            <span class="kanshi-sep"></span>
-            <span class="kanshi-char" id="fortune-shi-hero">子</span>
-            <span class="kanshi-sep"></span>
-            <span class="kanshi-label" id="fortune-tsuhen-hero">比肩</span>
+        <!-- 相手 -->
+        <div class="form-card" style="margin-bottom:16px">
+          <div class="aisho-person-label aisho-them-label">相手の情報</div>
+          <div class="form-row">
+            <label class="form-label" for="a-th-name">相手の呼び方（任意）</label>
+            <input type="text" id="a-th-name" class="form-input" placeholder="相手の名前・ニックネーム" maxlength="15">
           </div>
-
-          <!-- 身強・身弱バッジ -->
-          <div style="margin-top:12px">
-            <div id="strength-badge" class="strength-badge strength-badge-strong">
-              <span class="strength-badge-dot"></span>身強
+          <div class="form-row">
+            <label class="form-label" for="a-th-date">生年月日 ＊</label>
+            <input type="date" id="a-th-date" class="form-input" min="1900-01-01" max="2099-12-31">
+          </div>
+          <div class="form-row">
+            <label class="form-label" for="a-th-time">出生時間</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input type="time" id="a-th-time" class="form-input" style="flex:1">
+              <label style="display:flex;align-items:center;gap:4px;font-size:.75rem;color:var(--t2);white-space:nowrap;cursor:pointer">
+                <input type="checkbox" id="a-th-notime" style="accent-color:var(--purple)"> 不明
+              </label>
             </div>
           </div>
-        </div>
-
-        <!-- ② ステータスカード -->
-        <div class="status-section">
-          <div class="section-label">今日のステータス</div>
-          <div id="status-grid" class="status-grid"></div>
-        </div>
-
-        <!-- ③ 今日の一手（ミッション） -->
-        <div class="mission-card-big">
-          <div class="mission-tag">今日の一手</div>
-          <div class="mission-title">
-            <span id="mission-text">机の上を整える</span>
-            <span class="mission-title-emoji">🌟</span>
-          </div>
-          <div class="mission-body" id="advice-text" style="margin-top:10px"></div>
-        </div>
-
-        <!-- ④ アドバイス（やらない方がいいこと） -->
-        <div class="avoid-card">
-          <div class="avoid-title">✗ 今日は避けた方がいいこと</div>
-          <ul class="avoid-list" id="avoid-list"></ul>
-        </div>
-
-        <!-- ⑤ 展開セクション：命式の詳細 -->
-        <div class="expand-section">
-          <button class="expand-toggle" aria-expanded="false">
-            <span>命式の詳細を見る</span>
-            <span class="expand-arrow">▾</span>
-          </button>
-          <div class="expand-content">
-            <div class="expand-inner">
-              <!-- 四柱 -->
-              <div class="section-label" style="margin-bottom:10px">四柱（蔵干付き）</div>
-              <div id="pillars-compact" class="pillars-compact" style="margin-bottom:20px"></div>
-
-              <!-- 五行バランス -->
-              <div class="section-label" style="margin-bottom:10px">五行バランス（蔵干込み）</div>
-              <div id="gogyou-compact" class="gogyou-compact" style="margin-bottom:16px"></div>
-
-              <!-- 身強・身弱詳細 -->
-              <div class="section-label" style="margin-bottom:8px">身強・身弱</div>
-              <p id="strength-detail" style="font-size:0.82rem;color:#b8a880;line-height:1.8"></p>
-            </div>
+          <div class="form-row" style="margin-bottom:0">
+            <label class="form-label" for="a-th-gender">性別</label>
+            <select id="a-th-gender" class="form-input">
+              <option value="女">女性</option>
+              <option value="男">男性</option>
+            </select>
           </div>
         </div>
 
-        <!-- ⑥ 展開セクション：大運 -->
-        <div class="expand-section">
-          <button class="expand-toggle" aria-expanded="false">
-            <span>大運（10年の流れ）を見る</span>
-            <span class="expand-arrow">▾</span>
-          </button>
-          <div class="expand-content">
-            <div class="expand-inner">
-              <div class="section-label" style="margin-bottom:8px" id="daiun-startage-detail"></div>
-              <div id="daiun-compact" class="daiun-compact"></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ⑦ アクションボタン -->
-        <div class="action-buttons" style="margin-top:24px">
-          <button id="btn-reset" class="btn-action btn-action-ghost">
-            ← 入力に戻る
-          </button>
-          <button class="btn-action btn-action-gold btn-premium-trigger">
-            ♛ 相談する
-          </button>
-        </div>
-
-      </section>
-    </div><!-- /main-container -->
-  </div><!-- /app-wrapper -->
-
-  <!-- ===== プレミアムモーダル（ボトムシート） ===== -->
-  <div id="premium-modal" class="modal-overlay hidden">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div class="modal-icon">♛</div>
-      <h3 class="modal-title">AI 鑑定師に相談する</h3>
-      <p class="modal-desc">
-        命式に基づいた詳細な鑑定・相談は<br>
-        プレミアムプランでご利用いただけます。<br><br>
-        恋愛・仕事・転機の詳細鑑定<br>
-        大運・流年の本格解説<br>
-        毎日のAIアドバイス
-      </p>
-      <button id="modal-close" class="modal-close-btn">閉じる</button>
+        <button id="btn-aisho-calc" class="btn-cta">✦ 縁を読み解く ✦</button>
+      </div>
     </div>
+
+    <!-- 相性結果 -->
+    <div id="aisho-result-area" class="hidden">
+      <div class="aisho-result-hero">
+        <div class="aisho-names-row">
+          <div class="aisho-name-me" id="ar-myname"></div>
+          <div class="aisho-heart">❤</div>
+          <div class="aisho-name-them" id="ar-thname"></div>
+        </div>
+        <div class="aisho-score-wrap">
+          <svg class="aisho-score-svg" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="8"/>
+            <circle id="ar-score-ring" cx="60" cy="60" r="52" fill="none" stroke="#c9a84c" stroke-width="8"
+              stroke-linecap="round" stroke-dasharray="327" stroke-dashoffset="327"
+              transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 1.5s ease"/>
+          </svg>
+          <div class="aisho-score-inner">
+            <div class="aisho-score-num" id="ar-score-num">0</div>
+            <div class="aisho-score-label">相性スコア</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 無料結果 -->
+      <div class="aisho-free-results">
+        <!-- 関係タイプ -->
+        <div class="aisho-result-card">
+          <div class="arc-label">縁の形</div>
+          <div class="arc-type-icon" id="ar-type-icon">🌕</div>
+          <div class="arc-type-name" id="ar-type-name">鏡のような魂</div>
+          <p class="arc-type-desc" id="ar-type-desc"></p>
+        </div>
+
+        <!-- ひとこと鑑定 -->
+        <div class="aisho-result-card">
+          <div class="arc-label">ひとこと鑑定</div>
+          <p class="arc-hitokoto" id="ar-hitokoto"></p>
+        </div>
+
+        <!-- 五行バランス比較 -->
+        <div class="aisho-result-card">
+          <div class="arc-label">二人の五行エネルギー</div>
+          <div id="ar-gogyou-compare" class="ar-gogyou-compare"></div>
+        </div>
+      </div>
+
+      <!-- 有料ロック部分 -->
+      <div class="premium-lock-section">
+        <div class="pls-header">
+          <div class="pls-title">✦ 詳細相性レポート ✦</div>
+          <div class="pls-sub">二人の深い縁の読み解き</div>
+        </div>
+
+        <div class="pls-cards">
+          <!-- ロックカード -->
+          <div class="pls-card locked">
+            <div class="pls-card-lock">🔒</div>
+            <div class="pls-card-title">恋愛・深層相性</div>
+            <div class="pls-card-blur">二人の間に流れる恋愛エネルギーは、相手があなたをどう感じているかに直結しています。深い絆を育てるには...</div>
+          </div>
+          <div class="pls-card locked">
+            <div class="pls-card-lock">🔒</div>
+            <div class="pls-card-title">結婚・長期関係の可能性</div>
+            <div class="pls-card-blur">長い時間をともに過ごすとき、二人の命式はどのように影響し合うのか。長期的な安定と発展の...</div>
+          </div>
+          <div class="pls-card locked">
+            <div class="pls-card-lock">🔒</div>
+            <div class="pls-card-title">ぶつかりやすいポイント</div>
+            <div class="pls-card-blur">どんな縁にも、摩擦が生まれやすい場面があります。二人の命式が示す注意点と、それを...</div>
+          </div>
+          <div class="pls-card locked">
+            <div class="pls-card-lock">🔒</div>
+            <div class="pls-card-title">仲良くなるための秘訣</div>
+            <div class="pls-card-blur">この縁を最も豊かに育てるための具体的なアドバイス。二人それぞれへの...</div>
+          </div>
+          <div class="pls-card locked">
+            <div class="pls-card-lock">🔒</div>
+            <div class="pls-card-title">相手から見たあなたの印象</div>
+            <div class="pls-card-blur">相手の命式の目から見たとき、あなたはどのような存在として映っているのでしょうか...</div>
+          </div>
+          <div class="pls-card locked">
+            <div class="pls-card-lock">🔒</div>
+            <div class="pls-card-title">二人の縁の育て方</div>
+            <div class="pls-card-blur">この縁が最も美しく花開くための、二人だけの開運アドバイス。共に歩む未来を...</div>
+          </div>
+        </div>
+
+        <button class="btn-unlock premium-trigger">
+          <span>✦ 詳細相性レポートを開く ✦</span>
+          <span style="font-size:.72rem;opacity:.7;letter-spacing:.1em">PREMIUM</span>
+        </button>
+      </div>
+
+      <button id="btn-aisho-reset" class="btn-action-ghost-wide">← 別の相手を診断する</button>
+    </div>
+  </section>
+
+</div><!-- /container -->
+</div><!-- /wrapper -->
+
+<!-- 用語説明オーバーレイ -->
+<div id="term-overlay" class="tt-overlay tt-hidden"></div>
+
+<!-- 用語説明ボトムシート -->
+<div id="term-sheet" class="tt-sheet tt-hidden">
+  <div class="tt-handle"></div>
+
+  <div class="tt-header">
+    <div class="tt-title-row">
+      <span class="tt-badge">用語解説</span>
+      <button id="tt-close" class="tt-close-btn" aria-label="閉じる">✕</button>
+    </div>
+    <div class="tt-name-row">
+      <span id="tt-name" class="tt-name"></span>
+      <span id="tt-reading" class="tt-reading"></span>
+    </div>
+    <p id="tt-short" class="tt-short"></p>
   </div>
 
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <div class="tt-body-wrap">
+    <div class="tt-section">
+      <div class="tt-section-label">📖 どういう意味？</div>
+      <p id="tt-body" class="tt-section-text"></p>
+    </div>
+    <div class="tt-section">
+      <div class="tt-section-label">✨ 活かし方</div>
+      <p id="tt-advice" class="tt-section-text tt-advice-text"></p>
+    </div>
+  </div>
+</div>
 
+<!-- プレミアムモーダル -->
+<div id="modal" class="modal-bg hidden">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <span class="modal-icon">♛</span>
+    <h3 class="modal-title">AI 鑑定師への相談</h3>
+    <p class="modal-desc">
+      命式に基づいた本格鑑定・詳細相性レポートは<br>
+      <strong style="color:#c9a84c">プレミアムプラン</strong>でご利用いただけます。<br><br>
+      恋愛・仕事・転機の詳細鑑定<br>
+      大運・流年の本格解説<br>
+      詳細相性レポート（8項目）<br>
+      毎日のAIパーソナルアドバイス<br><br>
+      <span style="font-size:.78rem;color:#504838">現在鋭意開発中です。今しばらくお待ちください。</span>
+    </p>
+    <button id="modal-close" class="modal-close">閉じる</button>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
