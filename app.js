@@ -238,6 +238,84 @@ const Storage = {
 };
 
 // ══════════════════════════════════════════
+// ローディング演出モジュール
+// ══════════════════════════════════════════
+const Loading = {
+  STEPS: ['lstep-1','lstep-2','lstep-3','lstep-4'],
+  TEXTS: ['命式を解読中…','五行を分析中…','通変星を算出中…','今日の運命を鑑定中…'],
+  KANJI: ['命','式','運','星','縁'],
+
+  show(callback) {
+    const overlay = document.getElementById('loading-overlay');
+    const arc     = document.getElementById('loading-arc');
+    const text    = document.getElementById('loading-text');
+    const kanji   = document.getElementById('loading-kanji');
+    if (!overlay) { callback(); return; }
+
+    // リセット
+    overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    this.STEPS.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('lstep-done','lstep-active');
+    });
+    if (arc) arc.style.strokeDashoffset = '314';
+
+    const total = 2200; // 合計時間ms
+    const step  = total / 4;
+
+    // 円弧アニメーション
+    let startTime = null;
+    const animArc = (ts) => {
+      if (!startTime) startTime = ts;
+      const p = Math.min((ts - startTime) / total, 1);
+      if (arc) arc.style.strokeDashoffset = 314 * (1 - p);
+      if (p < 1) requestAnimationFrame(animArc);
+    };
+    requestAnimationFrame(animArc);
+
+    // ステップ表示
+    this.STEPS.forEach((id, i) => {
+      setTimeout(() => {
+        // 前のステップを完了に
+        if (i > 0) {
+          const prev = document.getElementById(this.STEPS[i-1]);
+          if (prev) { prev.classList.remove('lstep-active'); prev.classList.add('lstep-done'); }
+        }
+        const el = document.getElementById(id);
+        if (el) el.classList.add('lstep-active');
+        if (text) text.textContent = this.TEXTS[i] || '';
+        // 漢字をランダムに変える演出
+        let kCount = 0;
+        const kTimer = setInterval(() => {
+          if (kanji) kanji.textContent = this.KANJI[kCount % this.KANJI.length];
+          kCount++;
+          if (kCount > 6) clearInterval(kTimer);
+        }, 80);
+      }, i * step);
+    });
+
+    // 完了後にコールバック
+    setTimeout(() => {
+      // 最後のステップを完了に
+      const last = document.getElementById(this.STEPS[this.STEPS.length-1]);
+      if (last) { last.classList.remove('lstep-active'); last.classList.add('lstep-done'); }
+      if (kanji) kanji.textContent = '命';
+
+      setTimeout(() => {
+        overlay.classList.add('loading-out');
+        setTimeout(() => {
+          overlay.classList.add('hidden');
+          overlay.classList.remove('loading-out');
+          document.body.style.overflow = '';
+          callback();
+        }, 400);
+      }, 200);
+    }, total);
+  },
+};
+
+// ══════════════════════════════════════════
 // 用語辞書（TermDictionary）
 // ══════════════════════════════════════════
 const TERM_DICT = {
@@ -626,26 +704,28 @@ const App = {
     const tv     = document.getElementById('inp-time').value;
     const gender = document.getElementById('inp-gender').value;
     if (!dv) { alert('生年月日を入力してください'); return; }
-    const [y,m,d] = dv.split('-').map(Number);
-    const h = tv ? parseInt(tv.split(':')[0]) : 12;
 
-    AppState.name      = name;
-    AppState.pillars   = PE.calc(y,m,d,h);
-    AppState.gc        = AE.count(AppState.pillars);
-    AppState.gb        = AE.balance(AppState.gc);
-    AppState.str       = StE.judge(AppState.pillars.day.kanIdx, AppState.pillars, AppState.gc);
-    AppState.fortune   = FE.daily(AppState.pillars, new Date());
-    AppState.daiun     = DE.calc(y,m,d,gender,AppState.pillars);
-    AppState.myType    = MEISHIKI_TYPES[JIKKAN[AppState.pillars.day.kanIdx].name] || MEISHIKI_TYPES["甲"];
-    AppState.birthYear = y;
+    // ローディング演出を開始してから計算
+    Loading.show(() => {
+      const [y,m,d] = dv.split('-').map(Number);
+      const h = tv ? parseInt(tv.split(':')[0]) : 12;
 
-    // プロフィールをlocalStorageに保存
-    Storage.save({ name, date: dv, time: tv, gender });
-    // 保存済みバナーを非表示
-    document.getElementById('saved-banner')?.classList.add('hidden');
+      AppState.name      = name;
+      AppState.pillars   = PE.calc(y,m,d,h);
+      AppState.gc        = AE.count(AppState.pillars);
+      AppState.gb        = AE.balance(AppState.gc);
+      AppState.str       = StE.judge(AppState.pillars.day.kanIdx, AppState.pillars, AppState.gc);
+      AppState.fortune   = FE.daily(AppState.pillars, new Date());
+      AppState.daiun     = DE.calc(y,m,d,gender,AppState.pillars);
+      AppState.myType    = MEISHIKI_TYPES[JIKKAN[AppState.pillars.day.kanIdx].name] || MEISHIKI_TYPES["甲"];
+      AppState.birthYear = y;
 
-    UI.renderFortunePage();
-    PageManager.show('sec-fortune');
+      Storage.save({ name, date: dv, time: tv, gender });
+      document.getElementById('saved-banner')?.classList.add('hidden');
+
+      UI.renderFortunePage();
+      PageManager.show('sec-fortune');
+    });
   },
 };
 
@@ -665,6 +745,27 @@ const UI = {
     this.gogyouCard(d);
     this.pillarsDetail(d);
     this.daiunDetail(d);
+    // カードを順番にふわっと表示
+    this.animateCards();
+  },
+
+  animateCards() {
+    const cards = document.querySelectorAll(
+      '#sec-fortune .type-card, #sec-fortune .fortune-card, ' +
+      '#sec-fortune .status-section, #sec-fortune .lucky-card, ' +
+      '#sec-fortune .gogyou-card, #sec-fortune .detail-section, ' +
+      '#sec-fortune .premium-section'
+    );
+    cards.forEach((card, i) => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(28px)';
+      card.style.transition = 'none';
+      setTimeout(() => {
+        card.style.transition = `opacity 0.55s ease ${i * 0.08}s, transform 0.55s ease ${i * 0.08}s`;
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      }, 50);
+    });
   },
 
   typeCard(d) {

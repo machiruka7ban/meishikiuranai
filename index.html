@@ -15,6 +15,52 @@
   <div class="bg-glow-top"></div>
   <div class="bg-glow-bot"></div>
   <div class="bg-hex"></div>
+
+  <!-- 方位盤・星図SVG（背景装飾） -->
+  <div class="bg-mandala" aria-hidden="true">
+    <svg class="mandala-svg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="mgGold" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#c9a84c" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#c9a84c" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <!-- 外円 -->
+      <circle cx="300" cy="300" r="280" fill="none" stroke="#c9a84c" stroke-width="0.6" stroke-opacity="0.18"/>
+      <circle cx="300" cy="300" r="240" fill="none" stroke="#c9a84c" stroke-width="0.4" stroke-opacity="0.12"/>
+      <circle cx="300" cy="300" r="180" fill="none" stroke="#9b5de5" stroke-width="0.5" stroke-opacity="0.14"/>
+      <circle cx="300" cy="300" r="120" fill="none" stroke="#c9a84c" stroke-width="0.4" stroke-opacity="0.12"/>
+      <circle cx="300" cy="300" r="60"  fill="none" stroke="#9b5de5" stroke-width="0.6" stroke-opacity="0.18"/>
+      <!-- 八方位線 -->
+      <g stroke="#c9a84c" stroke-width="0.5" stroke-opacity="0.14">
+        <line x1="300" y1="20"  x2="300" y2="580"/>
+        <line x1="20"  y1="300" x2="580" y2="300"/>
+        <line x1="102" y1="102" x2="498" y2="498"/>
+        <line x1="498" y1="102" x2="102" y2="498"/>
+      </g>
+      <!-- 十二支の点（時計配置） -->
+      <g fill="#c9a84c" fill-opacity="0.3">
+        <circle cx="300" cy="22"  r="2.5"/>
+        <circle cx="439" cy="61"  r="2.5"/>
+        <circle cx="539" cy="161" r="2.5"/>
+        <circle cx="578" cy="300" r="2.5"/>
+        <circle cx="539" cy="439" r="2.5"/>
+        <circle cx="439" cy="539" r="2.5"/>
+        <circle cx="300" cy="578" r="2.5"/>
+        <circle cx="161" cy="539" r="2.5"/>
+        <circle cx="61"  cy="439" r="2.5"/>
+        <circle cx="22"  cy="300" r="2.5"/>
+        <circle cx="61"  cy="161" r="2.5"/>
+        <circle cx="161" cy="61"  r="2.5"/>
+      </g>
+      <!-- 中心の陰陽円 -->
+      <circle cx="300" cy="300" r="28" fill="url(#mgGold)" stroke="#c9a84c" stroke-width="0.8" stroke-opacity="0.3"/>
+      <circle cx="300" cy="300" r="4"  fill="#c9a84c" fill-opacity="0.35"/>
+      <!-- 六芒星 -->
+      <polygon points="300,242 330,295 300,348 270,295" fill="none" stroke="#9b5de5" stroke-width="0.5" stroke-opacity="0.2"/>
+      <polygon points="300,358 270,305 300,252 330,305" fill="none" stroke="#9b5de5" stroke-width="0.5" stroke-opacity="0.2"/>
+    </svg>
+  </div>
 </div>
 
 <!-- ナビゲーションバー（結果画面時に表示） -->
@@ -32,6 +78,29 @@
     <span class="nav-label">相性診断</span>
   </button>
 </nav>
+
+<!-- 解読ローディング演出 -->
+<div id="loading-overlay" class="loading-overlay hidden">
+  <div class="loading-inner">
+    <div class="loading-ring">
+      <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(201,168,76,0.15)" stroke-width="3"/>
+        <circle id="loading-arc" cx="60" cy="60" r="50" fill="none" stroke="#c9a84c"
+          stroke-width="3" stroke-linecap="round"
+          stroke-dasharray="314" stroke-dashoffset="314"
+          transform="rotate(-90 60 60)"/>
+      </svg>
+      <div class="loading-kanji" id="loading-kanji">命</div>
+    </div>
+    <div class="loading-text" id="loading-text">命式を解読中…</div>
+    <div class="loading-steps">
+      <span class="lstep" id="lstep-1">干支を算出</span>
+      <span class="lstep" id="lstep-2">五行を分析</span>
+      <span class="lstep" id="lstep-3">通変星を読む</span>
+      <span class="lstep" id="lstep-4">日運を鑑定</span>
+    </div>
+  </div>
+</div>
 
 <div class="wrapper">
 <div class="container">

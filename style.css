@@ -1321,3 +1321,235 @@ svg.gogyou-svg { width:180px; height:180px; }
   font-size: 0.65rem; color: var(--t3);
   letter-spacing: 0.1em; margin-top: 8px;
 }
+
+/* ══════════════════════════════════════════
+   v8 ビジュアル強化
+   ══════════════════════════════════════════ */
+
+/* ── 方位盤・星図背景 ── */
+.bg-mandala {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(600px, 100vw);
+  height: min(600px, 100vw);
+  pointer-events: none;
+  opacity: 0.55;
+}
+.mandala-svg {
+  width: 100%; height: 100%;
+  animation: mandalaRotate 120s linear infinite;
+}
+@keyframes mandalaRotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── タイトル強化 ── */
+.app-title {
+  position: relative;
+}
+.app-title::after {
+  content: '';
+  position: absolute;
+  bottom: -6px; left: 50%;
+  transform: translateX(-50%);
+  width: 60%; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  animation: titleLineGlow 3s ease-in-out infinite;
+}
+@keyframes titleLineGlow {
+  0%,100% { opacity: 0.4; width: 40%; }
+  50%      { opacity: 1;   width: 70%; }
+}
+
+/* ── ローディングオーバーレイ ── */
+.loading-overlay {
+  position: fixed; inset: 0; z-index: 600;
+  background: radial-gradient(ellipse at center,
+    rgba(10,8,28,0.97) 0%,
+    rgba(4,6,16,0.99) 100%);
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: opacity 0.4s ease;
+}
+.loading-overlay.loading-out { opacity: 0; }
+
+.loading-inner {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 24px;
+}
+
+.loading-ring {
+  position: relative; width: 120px; height: 120px;
+}
+.loading-ring svg {
+  width: 120px; height: 120px;
+  animation: loadingRingPulse 2s ease-in-out infinite;
+}
+@keyframes loadingRingPulse {
+  0%,100% { filter: drop-shadow(0 0 6px rgba(201,168,76,0.4)); }
+  50%      { filter: drop-shadow(0 0 20px rgba(201,168,76,0.8)); }
+}
+#loading-arc {
+  transition: stroke-dashoffset 0.1s linear;
+  stroke: var(--gold);
+}
+
+.loading-kanji {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--f-display);
+  font-size: 2.2rem; font-weight: 900;
+  color: var(--gold);
+  text-shadow: 0 0 20px rgba(201,168,76,0.6);
+}
+
+.loading-text {
+  font-family: var(--f-display);
+  font-size: 1rem; font-weight: 500;
+  color: var(--t2); letter-spacing: 0.2em;
+  min-height: 1.5em; text-align: center;
+}
+
+.loading-steps {
+  display: flex; flex-direction: column;
+  gap: 8px; align-items: center;
+}
+.lstep {
+  font-size: 0.72rem; color: var(--t3);
+  letter-spacing: 0.15em;
+  transition: color 0.3s, text-shadow 0.3s;
+  display: flex; align-items: center; gap: 6px;
+}
+.lstep::before {
+  content: '○';
+  font-size: 0.55rem;
+  transition: all 0.3s;
+}
+.lstep.lstep-active {
+  color: var(--gold);
+  text-shadow: 0 0 10px rgba(201,168,76,0.4);
+}
+.lstep.lstep-active::before { content: '◉'; color: var(--gold); }
+.lstep.lstep-done {
+  color: rgba(201,168,76,0.5);
+}
+.lstep.lstep-done::before { content: '●'; color: rgba(201,168,76,0.4); }
+
+/* ── 運気ランクバッジ強化 ── */
+.fortune-card-header {
+  position: relative;
+  overflow: hidden;
+}
+.fortune-card-header::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg,
+    rgba(155,93,229,0.06) 0%,
+    transparent 50%,
+    rgba(201,168,76,0.04) 100%);
+  pointer-events: none;
+}
+
+.rank-badge {
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(201,168,76,0.2);
+  border-radius: var(--r2);
+  padding: 8px 14px;
+  position: relative;
+}
+.rank-badge::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: var(--r2);
+  background: radial-gradient(ellipse at center,
+    rgba(201,168,76,0.08) 0%, transparent 70%);
+  animation: rankBadgePulse 3s ease-in-out infinite;
+}
+@keyframes rankBadgePulse {
+  0%,100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+.rank-letter {
+  font-size: 2.6rem !important;
+  filter: drop-shadow(0 0 12px currentColor);
+}
+
+/* ── タイプカード強化 ── */
+.type-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0.015) 0%,
+    transparent 50%,
+    rgba(201,168,76,0.02) 100%);
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* ── CTAボタン強化 ── */
+.btn-cta {
+  position: relative;
+  font-size: 1.1rem !important;
+  letter-spacing: 0.4em !important;
+  padding: 20px !important;
+  box-shadow:
+    0 4px 30px rgba(155,93,229,0.45),
+    0 0 0 1px rgba(201,168,76,0.35),
+    0 0 60px rgba(155,93,229,0.15) !important;
+}
+.btn-cta::after {
+  content: '';
+  position: absolute; inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.06) 40%,
+    rgba(255,255,255,0) 100%);
+  animation: ctaShine 4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes ctaShine {
+  0%,100% { opacity: 0; }
+  50%      { opacity: 1; }
+}
+
+/* ── fortune-cardの干支表示を強化 ── */
+.kanshi-char-big {
+  filter: drop-shadow(0 0 16px currentColor);
+}
+
+/* ── 結果カードの左ボーダーアクセント ── */
+.fortune-card {
+  border-left: 2px solid rgba(201,168,76,0.35) !important;
+}
+.type-card {
+  border-left: 2px solid rgba(155,93,229,0.35) !important;
+}
+.lucky-card {
+  border-left: 2px solid rgba(90,184,245,0.25) !important;
+}
+
+/* ── ステータスカードのホバー演出を強化 ── */
+.stat-card:hover {
+  box-shadow:
+    0 12px 32px rgba(0,0,0,0.5),
+    0 0 24px var(--card-glow, rgba(201,168,76,0.12)),
+    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+}
+
+/* ── 入力フォームのfocusリング強化 ── */
+.form-input:focus {
+  box-shadow:
+    0 0 0 3px rgba(155,93,229,0.18),
+    0 0 20px rgba(155,93,229,0.08),
+    inset 0 0 8px rgba(155,93,229,0.04) !important;
+}
+
+/* ── 保存バナーの輝き強化 ── */
+.saved-banner {
+  box-shadow: 0 0 24px rgba(201,168,76,0.08);
+}
