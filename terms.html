@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>利用規約 — 命式占 ／ 夢幻ラボ</title>
+  <style>
+    :root {
+      --bg:     #060c18;
+      --panel:  #0d1528;
+      --gold:   #c9a84c;
+      --gold-d: #7a6228;
+      --t1:     #f0e8d0;
+      --t2:     #a89868;
+      --t3:     #504838;
+      --border: rgba(201,168,76,0.18);
+      --purple: #9b5de5;
+      --r:      14px;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html { font-size:16px; scroll-behavior:smooth; }
+    body {
+      font-family:'Noto Serif JP', 'Hiragino Mincho ProN', serif;
+      background: var(--bg);
+      color: var(--t1);
+      min-height:100vh;
+      line-height:1.8;
+      background-image:
+        radial-gradient(ellipse 80% 40% at 50% 0%, rgba(155,93,229,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(201,168,76,0.06) 0%, transparent 60%);
+    }
+    .doc-header {
+      text-align:center;
+      padding:52px 24px 36px;
+      border-bottom:1px solid var(--border);
+    }
+    .doc-brand { font-size:0.65rem; color:var(--gold-d); letter-spacing:0.4em; text-transform:uppercase; margin-bottom:12px; }
+    .doc-title { font-size:clamp(1.4rem,4vw,2rem); font-weight:700; color:var(--gold); letter-spacing:0.2em; text-shadow:0 0 24px rgba(201,168,76,0.3); margin-bottom:8px; }
+    .doc-app   { font-size:0.8rem; color:var(--t3); letter-spacing:0.1em; }
+    .doc-date  { font-size:0.75rem; color:var(--t3); margin-top:6px; }
+    .doc-body  { max-width:680px; margin:0 auto; padding:40px 24px 80px; }
+    .doc-lead  { background:rgba(201,168,76,0.07); border:1px solid var(--border); border-radius:var(--r); padding:18px 20px; font-size:0.88rem; color:var(--t2); line-height:1.9; margin-bottom:32px; }
+    .doc-section { margin-bottom:32px; }
+    .sec-title { display:flex; align-items:center; gap:10px; font-size:1rem; font-weight:700; color:var(--gold); letter-spacing:0.1em; margin-bottom:14px; padding-bottom:10px; border-bottom:1px solid rgba(201,168,76,0.15); }
+    .sec-num { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; background:rgba(201,168,76,0.12); border:1px solid rgba(201,168,76,0.3); border-radius:50%; font-size:0.7rem; color:var(--gold); font-weight:700; flex-shrink:0; }
+    .sec-body { font-size:0.88rem; color:var(--t1); line-height:1.95; }
+    .sec-body p { margin-bottom:10px; }
+    .sec-body p:last-child { margin-bottom:0; }
+    .sec-body ul { padding-left:0; list-style:none; display:flex; flex-direction:column; gap:6px; margin:8px 0; }
+    .sec-body ul li { padding-left:16px; position:relative; font-size:0.86rem; color:var(--t2); }
+    .sec-body ul li::before { content:'・'; position:absolute; left:0; color:var(--gold-d); }
+    .highlight-box { background:rgba(155,93,229,0.07); border-left:2px solid rgba(155,93,229,0.4); border-radius:0 var(--r) var(--r) 0; padding:12px 16px; margin:10px 0; font-size:0.85rem; color:var(--t2); line-height:1.8; }
+    .warn-box { background:rgba(200,80,60,0.07); border-left:2px solid rgba(200,80,60,0.35); border-radius:0 var(--r) var(--r) 0; padding:12px 16px; margin:10px 0; font-size:0.85rem; color:rgba(220,160,140,0.9); line-height:1.8; }
+    .contact-box { background:var(--panel); border:1px solid var(--border); border-radius:var(--r); padding:18px 20px; font-size:0.86rem; color:var(--t2); line-height:1.9; }
+    .contact-box a { color:var(--gold); text-decoration:none; }
+    .back-btn { display:inline-flex; align-items:center; gap:8px; margin-top:40px; padding:10px 20px; background:rgba(201,168,76,0.1); border:1px solid rgba(201,168,76,0.3); border-radius:999px; color:var(--gold); font-size:0.82rem; text-decoration:none; cursor:pointer; transition:all 0.15s; }
+    .back-btn:hover { background:rgba(201,168,76,0.18); }
+    .policy-link { color:var(--gold); text-decoration:underline; text-underline-offset:3px; }
+  </style>
+</head>
+<body>
+
+<header class="doc-header">
+  <div class="doc-brand">夢幻ラボ / Mugen Lab</div>
+  <h1 class="doc-title">利用規約</h1>
+  <div class="doc-app">命式占（四柱推命アプリ）</div>
+  <div class="doc-date">制定日：2025年　最終更新：2025年</div>
+</header>
+
+<main class="doc-body">
+
+  <div class="doc-lead">
+    本利用規約（以下「本規約」）は、夢幻ラボ（以下「当方」）が提供するWebアプリ「命式占」（以下「本アプリ」）の利用条件を定めるものです。
+    本アプリをご利用になる前に、必ず本規約をお読みください。
+    本アプリをご利用いただいた時点で、本規約に同意したものとみなします。
+  </div>
+
+  <!-- 第1条 -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">1</span>サービスの内容</div>
+    <div class="sec-body">
+      <p>本アプリは、入力された生年月日等をもとに四柱推命の命式を算出し、鑑定結果・運勢・相性診断などの情報を提供するWebアプリケーションです。</p>
+      <div class="highlight-box">
+        本アプリの提供する情報はすべて占いの観点からの参考情報です。
+        医学的・法的・金銭的・その他の専門的な判断の代替となるものではありません。
+      </div>
+    </div>
+  </div>
+
+  <!-- 第2条 -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">2</span>利用対象・年齢制限</div>
+    <div class="sec-body">
+      <p>本アプリは16歳以上の方を対象としています。</p>
+      <p>16歳未満の方が本アプリを利用する場合は、保護者の同意を得た上でご利用ください。</p>
+    </div>
+  </div>
+
+  <!-- 第3条 -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">3</span>禁止事項</div>
+    <div class="sec-body">
+      <p>利用者は、本アプリの利用にあたり以下の行為を行ってはなりません。</p>
+      <ul>
+        <li>本アプリのソースコード・デザイン・鑑定文・データを無断で複製・転載・販売すること</li>
+        <li>本アプリを逆コンパイル・リバースエンジニアリングすること</li>
+        <li>本アプリを使用して他者を誹謗中傷・差別・ハラスメントする目的で利用すること</li>
+        <li>本アプリを商業目的で無断利用すること</li>
+        <li>当方または第三者の知的財産権・プライバシー・その他の権利を侵害すること</li>
+        <li>本アプリのサーバーや通信システムに過大な負荷をかける行為</li>
+        <li>その他、当方が不適切と判断する行為</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 第4条 -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">4</span>知的財産権</div>
+    <div class="sec-body">
+      <p>本アプリに含まれるすべてのコンテンツ（ソースコード・デザイン・鑑定文・データ・ロゴ等）の著作権その他の知的財産権は、当方に帰属します。</p>
+      <p>本規約の定めに基づく本アプリの利用は、当方から利用者へ著作権等を譲渡するものではありません。</p>
+    </div>
+  </div>
+
+  <!-- 第5条 -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">5</span>免責事項</div>
+    <div class="sec-body">
+      <p>当方は、以下の事項について責任を負いません。</p>
+      <ul>
+        <li>鑑定結果の正確性・完全性・有用性に関する保証</li>
+        <li>本アプリの利用または利用不能により生じた損害</li>
+        <li>利用者が第三者に提供した情報に起因するトラブル</li>
+        <li>天災・通信障害・サービス停止等による損害</li>
+        <li>ブラウザのデータ消去等による保存データの消失</li>
+      </ul>
+      <div class="warn-box">
+        四柱推命の鑑定結果は人生の重大な決定（転職・結婚・投資・医療判断など）の根拠とすることを意図したものではありません。
+        重要な判断は必ず専門家にご相談ください。
+      </div>
+    </div>
+  </div>
+
+  <!-- 第6条 -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">6</span>サービスの変更・停止</div>
+    <div class="sec-body">
+      <p>当方は、利用者への事前通知なしに、本アプリの内容変更・機能追加・サービスの一時停止・終了を行う場合があります。</p>
+      <p>これにより利用者に生じた損害について、当方は責任を負いません。</p>
+    </div>
+  </div>
+
+  <!-- 第7条 -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">7</span>有料サービス（プレミアム機能）について</div>
+    <div class="sec-body">
+      <p>本アプリは現在、基本機能を無料で提供しています。</p>
+      <p>将来的に有料のプレミアムプランを提供する予定があります。有料機能の提供開始にあたっては、料金・内容・キャンセルポリシー等を別途明示します。</p>
+      <div class="highlight-box">
+        現時点では課金・決済機能は実装されていません。「プレミアム機能」の表示はUI上の予告表示です。
+      </div>
+    </div>
+  </div>
+
+  <!-- 第8条 -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">8</span>プライバシーポリシー</div>
+    <div class="sec-body">
+      <p>本アプリにおける個人情報・データの取り扱いについては、別途定める
+        <a href="privacy.html" class="policy-link">プライバシーポリシー</a>
+        をご確認ください。
+      </p>
+      <p>本規約とプライバシーポリシーが矛盾する場合、プライバシーポリシーが優先されます。</p>
+    </div>
+  </div>
+
+  <!-- 第9条 -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">9</span>規約の変更</div>
+    <div class="sec-body">
+      <p>当方は、必要と判断した場合、本規約をいつでも変更することができます。</p>
+      <p>変更後の規約は、本アプリ上に掲載した時点から効力を持ちます。</p>
+      <p>変更後も本アプリをご利用いただいた場合、変更後の規約に同意いただいたものとみなします。</p>
+    </div>
+  </div>
+
+  <!-- 第10条 -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">10</span>準拠法・管轄</div>
+    <div class="sec-body">
+      <p>本規約は日本法に準拠します。</p>
+      <p>本規約または本アプリに関して紛争が生じた場合、当方の所在地を管轄する裁判所を専属的合意管轄裁判所とします。</p>
+    </div>
+  </div>
+
+  <!-- お問い合わせ -->
+  <div class="doc-section">
+    <div class="sec-title"><span class="sec-num">11</span>お問い合わせ</div>
+    <div class="sec-body">
+      <div class="contact-box">
+        本規約に関するお問い合わせは、下記までご連絡ください。<br><br>
+        <strong style="color:#c9a84c">夢幻ラボ（Mugen Lab）</strong><br>
+        メール：<a href="mailto:contact@mugen-lab.example.com">（公開後に記載）</a><br>
+        X（旧Twitter）：<a href="#">（公開後に記載）</a>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center">
+    <a href="index.html" class="back-btn">← アプリに戻る</a>
+  </div>
+
+</main>
+</body>
+</html>

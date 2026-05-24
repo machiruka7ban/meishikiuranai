@@ -47,6 +47,23 @@
        入力画面
        ══════════════════════════════ -->
   <section id="sec-input">
+
+    <!-- 保存済みバナー（前回データがあるときだけ表示） -->
+    <div id="saved-banner" class="saved-banner hidden">
+      <div class="sb-left">
+        <div class="sb-icon">✦</div>
+        <div class="sb-texts">
+          <div class="sb-name" id="saved-banner-name">あなた</div>
+          <div class="sb-meta">
+            <span id="saved-banner-date"></span>
+            <span class="sb-dot">·</span>
+            <span id="saved-banner-time"></span>
+          </div>
+        </div>
+      </div>
+      <button id="btn-banner-calc" class="sb-btn">このまま見る →</button>
+    </div>
+
     <div class="input-hero">
       <span class="input-sigil">☯</span>
       <h2>命式を解読する</h2>
@@ -76,6 +93,12 @@
       </div>
     </div>
     <button id="btn-calc" class="btn-cta">✦ 命式を解読する ✦</button>
+
+    <!-- データ削除ボタン（小さく・目立たせすぎない） -->
+    <div class="clear-data-wrap">
+      <button id="btn-clear-data" class="btn-clear-data">保存データを削除する</button>
+    </div>
+
   </section>
 
   <!-- ══════════════════════════════
@@ -409,6 +432,14 @@
 
 </div><!-- /container -->
 </div><!-- /wrapper -->
+
+<!-- フッター（利用規約・プライバシーポリシーリンク） -->
+<footer class="app-footer">
+  <a href="privacy.html" class="footer-link">プライバシーポリシー</a>
+  <span class="footer-sep">／</span>
+  <a href="terms.html" class="footer-link">利用規約</a>
+  <div class="footer-copy">© 夢幻ラボ</div>
+</footer>
 
 <!-- 用語説明オーバーレイ -->
 <div id="term-overlay" class="tt-overlay tt-hidden"></div>
