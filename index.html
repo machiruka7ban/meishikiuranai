@@ -107,8 +107,30 @@
 
   <!-- ヘッダー -->
   <header class="app-header">
-    <div class="header-ornament">命 式 占 術</div>
+    <div class="akatsuki-mark" aria-hidden="true">
+      <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" class="akatsuki-svg">
+        <!-- 夜明けの円 -->
+        <circle cx="30" cy="30" r="26" fill="none" stroke="#c9a84c" stroke-width="0.8" stroke-opacity="0.5"/>
+        <circle cx="30" cy="30" r="18" fill="none" stroke="#9b5de5" stroke-width="0.5" stroke-opacity="0.4"/>
+        <!-- 三日月 -->
+        <path d="M30 8 C18 8 10 18 10 30 C10 42 18 52 30 52 C20 46 14 38 14 30 C14 22 20 14 30 8Z"
+          fill="#c9a84c" fill-opacity="0.7"/>
+        <!-- 暁の光線 -->
+        <line x1="30" y1="2"  x2="30" y2="10" stroke="#c9a84c" stroke-width="1" stroke-opacity="0.6"/>
+        <line x1="30" y1="50" x2="30" y2="58" stroke="#c9a84c" stroke-width="1" stroke-opacity="0.3"/>
+        <line x1="2"  y1="30" x2="10" y2="30" stroke="#c9a84c" stroke-width="1" stroke-opacity="0.3"/>
+        <line x1="50" y1="30" x2="58" y2="30" stroke="#c9a84c" stroke-width="1" stroke-opacity="0.3"/>
+        <!-- 中心点 -->
+        <circle cx="30" cy="30" r="2.5" fill="#c9a84c" fill-opacity="0.8"/>
+      </svg>
+    </div>
+    <div class="header-ornament">夢幻ラボ / Mugen Lab</div>
     <h1 class="app-title">命 式 占</h1>
+    <div class="akatsuki-tagline">
+      <span class="akatsuki-by">鑑定師</span>
+      <span class="akatsuki-name-header">暁</span>
+      <span class="akatsuki-reading">あかつき</span>
+    </div>
     <p class="app-subtitle">四柱推命 × タイプ診断 × 相性診断</p>
   </header>
 
@@ -205,6 +227,14 @@
         </div>
       </div>
       <div class="fortune-card-body">
+        <!-- 暁からのメッセージ -->
+        <div class="akatsuki-msg-row">
+          <div class="akatsuki-avatar">☽</div>
+          <div class="akatsuki-msg-texts">
+            <div class="akatsuki-msg-name">暁 より</div>
+            <div class="akatsuki-msg-body" id="akatsuki-daily-msg"></div>
+          </div>
+        </div>
         <div class="kanshi-display">
           <span id="fc-kan" class="kanshi-char-big">甲</span>
           <div class="kanshi-mid">

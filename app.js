@@ -804,6 +804,19 @@ const UI = {
     document.getElementById('fc-mission').textContent   = f.mission;
     document.getElementById('fc-avoids').innerHTML = f.avoids.map(a =>
       `<div class="avoid-item"><div class="avoid-x">✕</div><span>${a}</span></div>`).join('');
+
+    // 暁からの一言メッセージ
+    const akatsukiMsgs = {
+      "S":  "今日のあなたには、特別な光が宿っています。その力を、信じてください。",
+      "A+": "今日は大きな流れがあなたを後押ししています。怖がらずに、進んでみてください。",
+      "A":  "今日の気は、穏やかに、でも確かにあなたに味方しています。",
+      "B+": "今日は静かな好機があります。小さなことを丁寧に積み重ねてみてください。",
+      "B":  "焦らなくていいです。今日のあなたには、着実に進む力があります。",
+      "C+": "今日は立ち止まる日かもしれません。それも、大切な時間です。",
+      "C":  "今日は内側を満たすことを優先してください。充電もまた、力です。",
+    };
+    const akEl = document.getElementById('akatsuki-daily-msg');
+    if (akEl) akEl.textContent = akatsukiMsgs[f.rank.rank] || akatsukiMsgs["B"];
   },
 
   statusGrid(d) {
@@ -986,6 +999,22 @@ const UI = {
     const container = document.getElementById('honshitsu-cards');
     container.innerHTML = '';
 
+    // 暁からの導入メッセージ
+    const introCard = document.createElement('div');
+    introCard.className = 'hs-card akatsuki-intro-card';
+    introCard.innerHTML = `
+      <div class="akatsuki-intro-inner">
+        <div class="akatsuki-symbol-sm">☽</div>
+        <div class="akatsuki-intro-text">
+          <div class="akatsuki-name-sm">暁 より</div>
+          <p class="akatsuki-intro-msg">
+            ${d.name} さんの命式を、静かに読み解きました。<br>
+            あなたの中にある光を、少し言葉にしてみます。
+          </p>
+        </div>
+      </div>`;
+    container.appendChild(introCard);
+
     sections.forEach((sec, idx) => {
       const text = hs[sec.key] || '';
       const card = document.createElement('div');
@@ -1004,7 +1033,6 @@ const UI = {
           </div>
           <p class="hs-card-body">${d.myType.desc}</p>`;
       } else {
-        // 複数段落に分割して表示
         const paras = text.split('\n\n').filter(p => p.trim());
         const parasHtml = paras.map(p => `<p class="hs-para">${p.trim()}</p>`).join('');
         card.innerHTML = `
@@ -1017,12 +1045,11 @@ const UI = {
       container.appendChild(card);
     });
 
-    // 五行特性カードを末尾に追加
+    // 五行特性カード
     const order = ["木","火","土","金","水"];
     const dom   = order.reduce((a,b) => (gb[a]||0)>(gb[b]||0) ? a : b);
     const weak  = order.reduce((a,b) => (gb[a]||0)<(gb[b]||0) ? a : b);
     const domG  = GOGYO[dom], weakG = GOGYO[weak];
-
     const gogyouCard = document.createElement('div');
     gogyouCard.className = 'hs-card hs-gogyou-summary';
     gogyouCard.style.animationDelay = `${sections.length * 0.07}s`;

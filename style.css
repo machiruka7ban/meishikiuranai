@@ -1553,3 +1553,120 @@ svg.gogyou-svg { width:180px; height:180px; }
 .saved-banner {
   box-shadow: 0 0 24px rgba(201,168,76,0.08);
 }
+
+/* ══════════════════════════════════════════
+   v9 暁（あかつき）ブランド
+   ══════════════════════════════════════════ */
+
+/* ── 暁シンボルマーク ── */
+.akatsuki-mark {
+  display: flex; justify-content: center;
+  margin-bottom: 12px;
+}
+.akatsuki-svg {
+  width: 56px; height: 56px;
+  filter: drop-shadow(0 0 12px rgba(201,168,76,0.45))
+          drop-shadow(0 0 24px rgba(155,93,229,0.2));
+  animation: akatsukiGlow 4s ease-in-out infinite;
+}
+@keyframes akatsukiGlow {
+  0%,100% {
+    filter: drop-shadow(0 0 10px rgba(201,168,76,0.4))
+            drop-shadow(0 0 20px rgba(155,93,229,0.15));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(201,168,76,0.7))
+            drop-shadow(0 0 40px rgba(155,93,229,0.3));
+  }
+}
+
+/* ── 暁タグライン ── */
+.akatsuki-tagline {
+  display: flex; align-items: baseline;
+  justify-content: center; gap: 8px;
+  margin: 6px 0 4px;
+}
+.akatsuki-by {
+  font-size: 0.68rem; color: var(--t3); letter-spacing: 0.2em;
+}
+.akatsuki-name-header {
+  font-family: var(--f-display);
+  font-size: 1.3rem; font-weight: 800;
+  color: var(--gold);
+  text-shadow: 0 0 16px rgba(201,168,76,0.5);
+  letter-spacing: 0.2em;
+}
+.akatsuki-reading {
+  font-size: 0.62rem; color: var(--t3); letter-spacing: 0.15em;
+}
+
+/* ── 暁からのメッセージ（fortune-card内） ── */
+.akatsuki-msg-row {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: rgba(155,93,229,0.07);
+  border: 1px solid rgba(155,93,229,0.18);
+  border-radius: var(--r2);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  position: relative; overflow: hidden;
+}
+.akatsuki-msg-row::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(155,93,229,0.4), transparent);
+}
+.akatsuki-avatar {
+  width: 32px; height: 32px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(155,93,229,0.15);
+  border: 1px solid rgba(155,93,229,0.3);
+  border-radius: 50%;
+  font-size: 1rem;
+  color: var(--purple);
+  text-shadow: 0 0 8px rgba(155,93,229,0.6);
+}
+.akatsuki-msg-texts { flex: 1; min-width: 0; }
+.akatsuki-msg-name {
+  font-size: 0.62rem; color: var(--purple);
+  letter-spacing: 0.2em; margin-bottom: 5px;
+}
+.akatsuki-msg-body {
+  font-size: 0.86rem; color: var(--t1); line-height: 1.85;
+  font-family: var(--f-display);
+}
+
+/* ── 本質鑑定ページの暁イントロカード ── */
+.akatsuki-intro-card {
+  background: linear-gradient(135deg,
+    rgba(155,93,229,0.1) 0%,
+    rgba(10,8,28,0.8) 50%,
+    rgba(201,168,76,0.06) 100%) !important;
+  border-color: rgba(155,93,229,0.25) !important;
+}
+.akatsuki-intro-inner {
+  display: flex; align-items: center; gap: 16px;
+}
+.akatsuki-symbol-sm {
+  width: 44px; height: 44px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(155,93,229,0.12);
+  border: 1px solid rgba(155,93,229,0.3);
+  border-radius: 50%;
+  font-size: 1.3rem; color: var(--purple);
+  text-shadow: 0 0 10px rgba(155,93,229,0.6);
+}
+.akatsuki-name-sm {
+  font-size: 0.65rem; color: var(--purple);
+  letter-spacing: 0.25em; margin-bottom: 6px;
+}
+.akatsuki-intro-msg {
+  font-size: 0.88rem; color: var(--t1);
+  line-height: 1.9; font-family: var(--f-display);
+}
+
+/* ── ローディング演出の暁カラー ── */
+#loading-arc { stroke: var(--gold) !important; }
+.loading-kanji {
+  color: var(--gold) !important;
+  font-family: var(--f-display) !important;
+}
